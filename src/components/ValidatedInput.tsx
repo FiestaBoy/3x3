@@ -9,7 +9,7 @@ export function ValidatedInput({
   maxLength,
   hints,
   inputRef,
-  onInput
+  onInput,
 }: {
   type: string;
   onChange?: (input: any) => void;
@@ -23,10 +23,15 @@ export function ValidatedInput({
   inputRef?: React.Ref<HTMLInputElement>;
   onInput?: React.FormEventHandler<HTMLInputElement>;
 }) {
+  const handleInput: React.FormEventHandler<HTMLInputElement> = (e) => {
+    e.currentTarget.setCustomValidity(""); // clear old custom error
+    onInput?.(e); // run any extra input logic
+  };
+
   return (
     <div className="w-70">
       <input
-        onInput={onInput}
+        onInput={handleInput}
         ref={inputRef}
         type={type}
         className={className}
