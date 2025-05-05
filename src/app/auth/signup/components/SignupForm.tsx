@@ -5,8 +5,6 @@ import { ValidatedInput } from "@/src/components/ValidatedInput";
 import { UserSignup } from "@/src/types/user";
 import { validateUserInput } from "@/src/lib/db/createUser";
 
-type FieldErrors = Record<string, string[]>;
-
 export default function SignupForm() {
   const formRef = useRef<HTMLFormElement>(null);
   const firstNameRef = useRef<HTMLInputElement>(null);
@@ -26,51 +24,19 @@ export default function SignupForm() {
   });
 
   const [canSubmit, setCanSubmit] = useState(false);
-  const [backendErrors, setBackendErrors] = useState<FieldErrors>({});
 
-  const handleChange = () => {
-    const form = formRef.current;
-    if (!form) return;
-
-    // 1. update form-wide validity
-    const formValid = form.checkValidity();
-    setCanSubmit(formValid);
-
-    // 2. clear per-field customValidity and drop any now-valid backend errors
-    const newErrors: FieldErrors = { ...backendErrors };
-    const refMap: Record<string, React.RefObject<HTMLInputElement | null>> = {
-      firstName: firstNameRef,
-      lastName: lastNameRef,
-      birthday: birthdayRef,
-      email: emailRef,
-      password: passwordRef,
-      confirm: confirmRef,
-    };
-
-    Object.entries(refMap).forEach(([field, ref]) => {
-      const input = ref.current;
-      if (!input) return;
-      input.setCustomValidity(""); // clear old backend message
-      if (input.validity.valid) {
-        delete newErrors[field]; // remove from errors if now valid
-      }
-    });
-
-    setBackendErrors(newErrors);
-  };
+  const handleChange = () => {setCanSubmit(formRef?.current?.checkValidity() ?? false)};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    // clear any prior validity messages
-    formRef.current
-      ?.querySelectorAll("input")
-      .forEach((i) => i.setCustomValidity(""));
-
     const validationRes = await validateUserInput(user);
     if (!validationRes.success) {
       const fieldErrors = validationRes.fieldErrors ?? {};
-      setBackendErrors(fieldErrors);
+
+      formRef.current
+      ?.querySelectorAll("input")
+      .forEach((i) => i.setCustomValidity(""));
 
       Object.entries(fieldErrors).forEach(([field, messages]) => {
         if (messages.length) {
@@ -91,13 +57,11 @@ export default function SignupForm() {
           }
         }
       });
-
+      
       formRef.current?.checkValidity();
       return;
     }
-
-    setBackendErrors({});
-    // createUser(user) -  DB function
+    console.log("success")
   };
   const handlePasswordConfirm = () => {
     if (confirmRef.current && passwordRef.current) {

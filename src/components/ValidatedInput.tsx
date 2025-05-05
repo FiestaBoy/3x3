@@ -24,8 +24,8 @@ export function ValidatedInput({
   onInput?: React.FormEventHandler<HTMLInputElement>;
 }) {
   const handleInput: React.FormEventHandler<HTMLInputElement> = (e) => {
-    e.currentTarget.setCustomValidity(""); // clear old custom error
-    onInput?.(e); // run any extra input logic
+    e.currentTarget.setCustomValidity("");
+    onInput?.(e);
   };
 
   return (
