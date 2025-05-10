@@ -2,6 +2,8 @@
 
 import { loginUser } from "@/src/lib/db/loginUser";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -21,6 +23,8 @@ export default function Form() {
     formState: { errors, isSubmitting },
   } = useForm<FormFields>({ resolver: zodResolver(schema), mode: "onChange" });
 
+  const router = useRouter();
+
   const onSubmit: SubmitHandler<FormFields> = async () => {
     const formValues = getValues();
 
@@ -36,6 +40,7 @@ export default function Form() {
     }
 
     console.log("Login successful!");
+    router.push("/");
   };
 
   const formFields: {

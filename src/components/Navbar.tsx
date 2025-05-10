@@ -13,7 +13,7 @@ export default function Navbar() {
       </div>
       <div className="flex items-center gap-1">
         <ThemeController />
-        <Link href="/search/tournaments" className="btn btn-square btn-ghost">
+        <Link href="/tournaments" className="btn btn-square btn-ghost">
           <Search />
         </Link>
         <Link href="/auth/login" className="btn btn-ghost text-xl">

@@ -1,6 +1,12 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
+type SessionPayload = {
+  userId: string;
+  role: string;
+  expires: string;
+};
+
 const secretKey = process.env.JWT_SECRET;
 if (!secretKey) {
   throw new Error("Missing JWT_SECRET");
@@ -15,12 +21,12 @@ export async function encrypt(payload: any) {
     .sign(key);
 }
 
-export async function decrypt(input: string): Promise<any> {
+export async function decrypt(input: string): Promise<SessionPayload | null> {
   try {
     const { payload } = await jwtVerify(input, key, {
       algorithms: ["HS256"],
     });
-    return payload;
+    return payload as SessionPayload;
   } catch (e) {
     return null;
   }
