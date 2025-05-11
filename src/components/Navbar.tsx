@@ -1,9 +1,13 @@
 import Link from "next/link";
-
 import { Search } from "lucide-react";
 import ThemeController from "./ThemeController";
+import { SessionPayload } from "../lib/session";
 
-export default function Navbar() {
+type NavbarProps = {
+  session: SessionPayload | null
+}
+
+export default function Navbar({session}: NavbarProps) {
   return (
     <div className="navbar fixed top-0 left-0 right-0 z-50 bg-base-100">
       <div className="flex-1">

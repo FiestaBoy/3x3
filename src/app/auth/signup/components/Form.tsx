@@ -83,7 +83,7 @@ export function Form() {
   ];
 
   return (
-    <div className="w-50">
+    <div className="w-70">
       <input
         type="checkbox"
         id="success-modal"
@@ -108,7 +108,7 @@ export function Form() {
         noValidate
       >
         {formFields.map((field) => (
-          <div key={field.name} className="flex flex-col w-full gap-0.75">
+          <div key={field.name} className="flex flex-col w-full gap-0.75 py-1">
             <input
               {...register(field.name)}
               type={field.type}

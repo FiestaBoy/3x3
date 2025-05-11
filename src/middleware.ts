@@ -16,9 +16,5 @@ export default async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/auth/login", req.url))
   }
 
-  if (!session.userId) {
-    return NextResponse.redirect(new URL("/auth/login", req.url))
-  }
-
   return NextResponse.next();
 }

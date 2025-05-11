@@ -1,7 +1,7 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
-type SessionPayload = {
+export type SessionPayload = {
   userId: string;
   role: string;
   expires: string;
