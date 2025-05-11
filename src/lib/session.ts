@@ -1,5 +1,8 @@
+"use server"
+
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 export type SessionPayload = {
   userId: string;
@@ -66,4 +69,8 @@ export async function verifySession() {
     role: session.role,
     expires: session.expires,
   };
+}
+export async function logOut() {
+    (await cookies()).delete("session")
+    redirect("/")
 }

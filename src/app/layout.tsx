@@ -1,3 +1,4 @@
+import Footer from "../components/Footer";
 import Navbar from "../components/Navbar";
 import { decrypt } from "../lib/session";
 import "./globals.css";
@@ -16,6 +17,7 @@ export default async function RootLayout({
       <body>
         <Navbar session={cookie?.userId ? cookie : null}/>
         {children}
+        <Footer/>
       </body>
     </html>
   );
