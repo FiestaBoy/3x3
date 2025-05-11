@@ -1,3 +1,8 @@
 export default function page() {
-  return <div>nice to see you here</div>;
+  return (
+    <div className="flex justify-center items-center min-h-screen">
+  <h1 className="text-5xl">HELOOO</h1>
+</div>
+
+  ) 
 }

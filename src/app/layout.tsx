@@ -14,7 +14,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <head></head>
-      <body>
+      <body className="bg-base-200">
         <Navbar session={cookie?.userId ? cookie : null}/>
         {children}
         <Footer/>
