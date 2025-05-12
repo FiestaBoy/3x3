@@ -8,12 +8,12 @@ export const config = {
 export default async function middleware(req: NextRequest) {
   const cookie = req.cookies.get("session")?.value;
   if (!cookie) {
-    return NextResponse.redirect(new URL("/auth/login", req.url))
+    return NextResponse.redirect(new URL("/auth/login", req.url));
   }
   const session = await decrypt(cookie);
 
   if (!session) {
-    return NextResponse.redirect(new URL("/auth/login", req.url))
+    return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
   return NextResponse.next();

@@ -1,4 +1,4 @@
-"use server"
+"use server";
 
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
@@ -71,6 +71,6 @@ export async function verifySession() {
   };
 }
 export async function logOut() {
-    (await cookies()).delete("session")
-    redirect("/")
+  (await cookies()).delete("session");
+  redirect("/");
 }
