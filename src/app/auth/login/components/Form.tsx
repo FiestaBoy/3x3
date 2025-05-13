@@ -38,8 +38,6 @@ export default function Form() {
       );
       return;
     }
-
-    console.log("Login successful!");
     router.push("/");
   };
 

@@ -10,12 +10,12 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const token = (await cookies()).get("session")?.value;
-  const cookie = token ? await decrypt(token) : null;
+  const session = token ? await decrypt(token) : null;
   return (
     <html lang="en">
       <head></head>
       <body className="bg-base-200">
-        <Navbar session={cookie?.userId ? cookie : null} />
+        <Navbar session={session} />
         {children}
         <Footer />
       </body>
