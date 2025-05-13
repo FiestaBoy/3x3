@@ -2,17 +2,19 @@ import Link from "next/link";
 import { SessionPayload } from "@/src/lib/session";
 import InfoSection from "../common/InfoSection";
 import FeatureCard from "./FeatureCard";
+import WelcomeCard from "./WelcomeCard";
 
 type SessionProps = {
   session: SessionPayload | null;
 };
 
-export default function LandingPage(session: SessionProps) {
+export default function LandingPage({ session }: SessionProps) {
   return (
     <div className="min-h-screen bg-base-200 flex flex-col">
-      
-
-      <main className="flex-grow container mx-auto px-4">
+      {!session && <WelcomeCard />}
+      <main
+        className={`flex-grow container mx-auto px-4 ${session ? "py-5" : ""}`}
+      >
         <InfoSection
           title="Key Features"
           subtitle="Discover what makes 3x3 the best choice for your games."
@@ -45,32 +47,36 @@ export default function LandingPage(session: SessionProps) {
           </div>
         </InfoSection>
 
-        <InfoSection
-          title="How It Works"
-          subtitle="Joining the action is simple."
-          className="py-12 md:py-16 bg-base-300/50 rounded-box my-12 md:my-16 px-4"
-        >
-          <ul className="steps steps-vertical lg:steps-horizontal w-full">
-            <li data-content="●" className="step step-primary text-lg">
-              Sign Up Free
-            </li>
-            <li data-content="●" className="step step-primary text-lg">
-              Create or Join
-            </li>
-            <li data-content="●" className="step step-primary text-lg">
-              Play & Compete
-            </li>
-          </ul>
-        </InfoSection>
+        {!session && (
+          <>
+            <InfoSection
+              title="How It Works"
+              subtitle="Joining the action is simple."
+              className="py-12 md:py-16 bg-base-300/50 rounded-box my-12 md:my-16 px-4"
+            >
+              <ul className="steps steps-vertical lg:steps-horizontal w-full">
+                <li data-content="●" className="step step-primary text-lg">
+                  Sign Up Free
+                </li>
+                <li data-content="●" className="step step-primary text-lg">
+                  Create or Join
+                </li>
+                <li data-content="●" className="step step-primary text-lg">
+                  Play & Compete
+                </li>
+              </ul>
+            </InfoSection>
 
-        <InfoSection title="Ready to Ball?" className="py-16 text-center">
-          <p className="mb-8 text-xl max-w-xl mx-auto text-base-content/80">
-            Sign up today and take your 3x3 game to the next level!
-          </p>
-          <Link href={"/auth/signup"}>
-            <button className="btn btn-primary btn-lg">Sign Up Now</button>
-          </Link>
-        </InfoSection>
+            <InfoSection title="Ready to Ball?" className="py-16 text-center">
+              <p className="mb-8 text-xl max-w-xl mx-auto text-base-content/80">
+                Sign up today and take your 3x3 game to the next level!
+              </p>
+              <Link href={"/auth/signup"}>
+                <button className="btn btn-primary btn-lg">Sign Up Now</button>
+              </Link>
+            </InfoSection>
+          </>
+        )}
       </main>
     </div>
   );
