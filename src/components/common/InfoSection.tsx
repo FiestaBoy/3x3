@@ -13,7 +13,7 @@ export default function InfoSection({
   children,
   className = "py-12 md:py-16",
   titleClassName = "text-3xl md:text-4xl font-bold text-center mb-4",
-  contentClassName = "max-w-4xl mx-auto",
+  contentClassName = "max-w-4xl mx-auto flex justify-center",
 }: InfoSectionProps) {
   return (
     <section className={className}>

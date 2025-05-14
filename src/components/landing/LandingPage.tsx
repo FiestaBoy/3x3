@@ -11,9 +11,24 @@ type SessionProps = {
 export default function LandingPage({ session }: SessionProps) {
   return (
     <div className="min-h-screen bg-base-200 flex flex-col">
+      {session && (
+        <div className="hero bg-base-200 pt-24">
+          <div className="hero-content text-center">
+            <div className="max-w-md">
+              <h1 className="text-4xl font-bold">Create Your Team</h1>
+              <p className="py-6 text-lg">
+                It takes less than a minute.
+              </p>
+              <Link href={"/teams/create"}>
+                <button className="btn btn-secondary btn-wide">Start Now</button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
       {!session && <WelcomeCard />}
       <main
-        className={`flex-grow container mx-auto px-4 ${session ? "py-5" : ""}`}
+        className="flex-grow container mx-auto px-4"
       >
         <InfoSection
           title="Key Features"
@@ -67,10 +82,7 @@ export default function LandingPage({ session }: SessionProps) {
               </ul>
             </InfoSection>
 
-            <InfoSection title="Ready to Ball?" className="py-16 text-center">
-              <p className="mb-8 text-xl max-w-xl mx-auto text-base-content/80">
-                Sign up today and take your 3x3 game to the next level!
-              </p>
+            <InfoSection title="Ready to Ball?" subtitle="Sign up today and take your 3x3 game to the next level!" className="py-16 text-center">
               <Link href={"/auth/signup"}>
                 <button className="btn btn-primary btn-lg">Sign Up Now</button>
               </Link>

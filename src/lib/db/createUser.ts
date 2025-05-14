@@ -1,6 +1,6 @@
 "use server";
 
-import { FormFields } from "@/src/app/auth/signup/components/Form";
+import { FormFields } from "@/src/components/auth/SignupForm";
 import bcrypt from "bcryptjs";
 import { emailInUse } from "./helpers";
 

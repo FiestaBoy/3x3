@@ -1,6 +1,6 @@
 "use server";
 
-import { FormFields } from "@/src/app/auth/login/components/Form";
+import { FormFields } from "@/src/components/auth/LoginForm";
 import { confirmLoginCredentials, LoginResult } from "./helpers";
 import { createSession } from "../session";
 

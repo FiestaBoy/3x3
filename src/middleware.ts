@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { decrypt } from "./lib/session";
 
 export const config = {
-  matcher: ["/tournaments/:path*"],
+  matcher: ["/tournaments/:path*", "/teams/:path*"],
 };
 
 export default async function middleware(req: NextRequest) {

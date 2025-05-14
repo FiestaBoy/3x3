@@ -54,3 +54,7 @@ export async function confirmLoginCredentials(
     return { success: false };
   }
 }
+
+export async function confirmAgeGroup(ageGroup: string, userId: string) {
+  
+}
