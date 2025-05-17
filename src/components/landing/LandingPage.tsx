@@ -16,20 +16,18 @@ export default function LandingPage({ session }: SessionProps) {
           <div className="hero-content text-center">
             <div className="max-w-md">
               <h1 className="text-4xl font-bold">Create Your Team</h1>
-              <p className="py-6 text-lg">
-                It takes less than a minute.
-              </p>
+              <p className="py-6 text-lg">It takes less than a minute.</p>
               <Link href={"/teams/create"}>
-                <button className="btn btn-secondary btn-wide">Start Now</button>
+                <button className="btn btn-secondary btn-wide">
+                  Start Now
+                </button>
               </Link>
             </div>
           </div>
         </div>
       )}
       {!session && <WelcomeCard />}
-      <main
-        className="flex-grow container mx-auto px-4"
-      >
+      <main className="flex-grow container mx-auto px-4">
         <InfoSection
           title="Key Features"
           subtitle="Discover what makes 3x3 the best choice for your games."
@@ -82,7 +80,11 @@ export default function LandingPage({ session }: SessionProps) {
               </ul>
             </InfoSection>
 
-            <InfoSection title="Ready to Ball?" subtitle="Sign up today and take your 3x3 game to the next level!" className="py-16 text-center">
+            <InfoSection
+              title="Ready to Ball?"
+              subtitle="Sign up today and take your 3x3 game to the next level!"
+              className="py-16 text-center"
+            >
               <Link href={"/auth/signup"}>
                 <button className="btn btn-primary btn-lg">Sign Up Now</button>
               </Link>

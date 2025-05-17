@@ -1,4 +1,4 @@
-import RegisterTeamPage from "@/src/components/team/RegisterTeamPage";
+import RegisterTeamPage from "@/src/components/teams/RegisterTeamPage";
 
 export default function page() {
   return <RegisterTeamPage />;

@@ -11,7 +11,7 @@ export default function RegisterTeamPage() {
         <div className="card w-full max-w-sm shadow-2xl bg-base-100">
           <div className="card-body flex justify-center items-center">
             <h1 className="text-2xl font-bold mb-3">Team details</h1>
-            <RegisterForm/>
+            <RegisterForm />
           </div>
         </div>
       </InfoSection>

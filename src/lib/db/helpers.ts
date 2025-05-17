@@ -1,5 +1,8 @@
 import bcrypt from "bcryptjs";
-import { query } from "./db";
+import {
+  AgeGroup,
+  getAgeGroupMinBirthdays,
+} from "@/src/app/constants/ageGroups";
 
 type LoginSuccess = { success: true; userId: number };
 type LoginFailure = { success: false };
@@ -27,13 +30,11 @@ export async function confirmLoginCredentials(
   try {
     const statement = `SELECT email, password_hash, user_id FROM users where email = ?`;
 
-    const rows = await query<
-      {
-        email: string;
-        password_hash: string;
-        user_id: number;
-      }[]
-    >(statement, [email]);
+    const rows: {
+      email: string;
+      password_hash: string;
+      user_id: number;
+    }[] = await db.query(statement, [email]);
 
     if (rows.length === 0) return { success: false };
 
@@ -55,6 +56,20 @@ export async function confirmLoginCredentials(
   }
 }
 
-export async function confirmAgeGroup(ageGroup: string, userId: string) {
-  
+export async function confirmAgeGroup(ageGroup: AgeGroup, userId: string) {
+  try {
+    const sql = "SELECT birthday FROM users WHERE user_id = ?";
+    const rows: { birthday: string }[] = await db.query(sql, [userId]);
+
+    const birthdayRaw = rows?.[0]?.birthday;
+
+    const userBirthday = new Date(birthdayRaw);
+
+    const minBirthday = getAgeGroupMinBirthdays()[ageGroup];
+
+    return { success: userBirthday >= minBirthday };
+  } catch (e) {
+    console.error("Error confirming age group:", e);
+    return { success: false };
+  }
 }
