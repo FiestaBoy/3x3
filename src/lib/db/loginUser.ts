@@ -4,7 +4,13 @@ import { FormFields } from "@/src/components/auth/LoginForm";
 import { confirmLoginCredentials, LoginResult } from "./helpers";
 import { createSession } from "../session";
 
-export async function loginUser(user: FormFields) {
+type ReturnType = {
+  success: boolean;
+  field: keyof FormFields | "root";
+  message: string;
+}
+
+export async function loginUser(user: FormFields): Promise<ReturnType> {
   const checkedCredentials: LoginResult = await confirmLoginCredentials(
     user.email,
     user.password,
@@ -28,5 +34,5 @@ export async function loginUser(user: FormFields) {
     };
   }
 
-  return { success: true };
+  return { success: true, field: "root", message: "Login successful" };
 }

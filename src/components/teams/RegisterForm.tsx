@@ -3,6 +3,7 @@
 import { createTeam } from "@/src/lib/db/createTeam";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -27,6 +28,8 @@ export default function RegisterForm() {
     formState: { errors, isSubmitting },
   } = useForm<FormFields>({ resolver: zodResolver(schema), mode: "onChange" });
 
+  const [rootMessage, setRootMessage] = useState<string | null>(null)
+
   const router = useRouter();
 
   const onSubmit = async () => {
@@ -36,16 +39,17 @@ export default function RegisterForm() {
 
     const response = await createTeam(formValues);
 
-    console.log(response)
-
-    if (!response) return
-
     if (!response?.success ) {
+      if (response.field === "root") {
+        setRootMessage(response.message)
+          return
+      }
       setError(response?.field, {message: response?.message})
     }
   };
 
   return (
+    <>
     <form
       className="flex flex-col gap-4 w-full items-center"
       noValidate
@@ -88,5 +92,17 @@ export default function RegisterForm() {
         {isSubmitting ? "Submitting..." : "Register"}
       </button>
     </form>
+    {rootMessage && (
+          <div className="alert alert-error">
+            <span>{rootMessage}</span>
+            <button
+              className="btn btn-sm btn-ghost ml-2"
+              onClick={() => setRootMessage(null)}
+            >
+              ✕
+            </button>
+          </div>
+    )}
+    </>
   );
 }

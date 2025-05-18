@@ -67,9 +67,36 @@ export async function confirmAgeGroup(ageGroup: AgeGroup, userId: string) {
 
     const minBirthday = getAgeGroupMinBirthdays()[ageGroup];
 
-    return { success: userBirthday >= minBirthday };
+    return { result: userBirthday >= minBirthday };
   } catch (e) {
     console.error("Error confirming age group:", e);
     return { success: false };
+  }
+}
+
+export async function duplicateTeamName(name: string, age_group: string): Promise<boolean> {
+  try {
+    const sql = "SELECT name FROM teams WHERE name = ? AND age_group = ?"
+
+    const response = await db.query(sql, [name, age_group])
+
+    return response.length > 0
+  } catch (e) {
+    console.log("Failed to check for a duplicate name", e)
+    return false
+  }
+}
+
+export async function canCreateMoreTeams(userId: string) {
+  try {
+    const sql = "SELECT COUNT(*) as count FROM teams WHERE captain_id = ?"
+
+    const response = await db.query(sql, userId)
+
+    const count = response?.[0].count
+
+    return count < 3
+  } catch (e) {
+    console.log("Failed to check if a user can create more teams")
   }
 }
