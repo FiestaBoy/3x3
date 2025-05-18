@@ -24,7 +24,7 @@ export async function loginUser(user: FormFields): Promise<ReturnType> {
   }
 
   try {
-    await createSession(checkedCredentials.userId, "player");
+    await createSession(checkedCredentials.userId, checkedCredentials.role);
   } catch (e) {
     console.log("Failed to create session", e);
     return {

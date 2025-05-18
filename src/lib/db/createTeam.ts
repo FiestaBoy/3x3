@@ -1,9 +1,7 @@
 "use server";
 
 import { FormFields } from "@/src/components/teams/RegisterForm";
-import { canCreateMoreTeams, confirmAgeGroup, duplicateTeamName } from "./helpers";
-import { cookies } from "next/headers";
-import { decrypt } from "../session";
+import { canCreateMoreTeams, confirmAgeGroup, duplicateTeamName, getUserSession } from "./helpers";
 
 const db = require("@/src/lib/db/db");
 
@@ -14,11 +12,7 @@ export type ReturnType = {
 }
 
 export async function createTeam(team: FormFields): Promise<ReturnType> {
-  const cookie = (await cookies()).get("session")?.value;
-  if (!cookie) throw new Error("No session found");
-
-  const session = await decrypt(cookie);
-  if (!session) throw new Error("Invalid session");
+  const session = await getUserSession()
 
   if (!(await canCreateMoreTeams(session.userId))) {
     return {success: false, field: "root", message: "You can only create up to 3 teams"}

@@ -3,8 +3,10 @@ import {
   AgeGroup,
   getAgeGroupMinBirthdays,
 } from "@/src/app/constants/ageGroups";
+import { cookies } from "next/headers";
+import { decrypt } from "../session";
 
-type LoginSuccess = { success: true; userId: number };
+type LoginSuccess = { success: true; userId: number; role: string; };
 type LoginFailure = { success: false };
 export type LoginResult = LoginSuccess | LoginFailure;
 
@@ -28,12 +30,13 @@ export async function confirmLoginCredentials(
   password: string,
 ): Promise<LoginResult> {
   try {
-    const statement = `SELECT email, password_hash, user_id FROM users where email = ?`;
+    const statement = `SELECT email, password_hash, user_id, role FROM users where email = ?`;
 
     const rows: {
       email: string;
       password_hash: string;
       user_id: number;
+      role: string;
     }[] = await db.query(statement, [email]);
 
     if (rows.length === 0) return { success: false };
@@ -49,6 +52,7 @@ export async function confirmLoginCredentials(
     return {
       success: true,
       userId: user.user_id,
+      role: user.role,
     };
   } catch (e) {
     console.log("Error confirming login credentials", e);
@@ -99,4 +103,13 @@ export async function canCreateMoreTeams(userId: string) {
   } catch (e) {
     console.log("Failed to check if a user can create more teams")
   }
+}
+
+export async function getUserSession() {
+  const cookie = (await cookies()).get("session")?.value
+  if (!cookie) throw new Error("Unauthenticated")
+  const session = await decrypt(cookie)
+  if (!session) throw new Error("Invalid session")
+  
+  return session
 }
