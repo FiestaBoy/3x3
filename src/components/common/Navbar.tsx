@@ -25,6 +25,9 @@ export default function Navbar({ session }: NavbarProps) {
             <Link href="/tournaments" className="btn btn-ghost text-xl">
               Tournaments
             </Link>
+            <Link href="/teams/my-teams" className="btn btn-ghost text-xl">
+              My Teams
+            </Link>
             <Dropdown />
           </div>
         </>

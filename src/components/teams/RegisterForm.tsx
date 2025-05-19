@@ -33,7 +33,6 @@ export default function RegisterForm() {
   const router = useRouter();
 
   const onSubmit = async () => {
-    console.log(getValues());
 
     const formValues = getValues();
 
