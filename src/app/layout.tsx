@@ -14,7 +14,7 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <head></head>
-      <body className="bg-base-200">
+      <body className="bg-base-200 pt-24">
         <Navbar session={session} />
         {children}
         <Footer />
