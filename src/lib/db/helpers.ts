@@ -6,7 +6,7 @@ import {
 import { cookies } from "next/headers";
 import { decrypt } from "../session";
 
-type LoginSuccess = { success: true; userId: number; role: string; };
+type LoginSuccess = { success: true; userId: number; role: string };
 type LoginFailure = { success: false };
 export type LoginResult = LoginSuccess | LoginFailure;
 
@@ -78,38 +78,41 @@ export async function confirmAgeGroup(ageGroup: AgeGroup, userId: string) {
   }
 }
 
-export async function duplicateTeamName(name: string, age_group: string): Promise<boolean> {
+export async function duplicateTeamName(
+  name: string,
+  age_group: string,
+): Promise<boolean> {
   try {
-    const sql = "SELECT name FROM teams WHERE name = ? AND age_group = ?"
+    const sql = "SELECT name FROM teams WHERE name = ? AND age_group = ?";
 
-    const response = await db.query(sql, [name, age_group])
+    const response = await db.query(sql, [name, age_group]);
 
-    return response.length > 0
+    return response.length > 0;
   } catch (e) {
-    console.log("Failed to check for a duplicate name", e)
-    return false
+    console.log("Failed to check for a duplicate name", e);
+    return false;
   }
 }
 
 export async function canCreateMoreTeams(userId: string) {
   try {
-    const sql = "SELECT COUNT(*) as count FROM teams WHERE captain_id = ?"
+    const sql = "SELECT COUNT(*) as count FROM teams WHERE captain_id = ?";
 
-    const response = await db.query(sql, userId)
+    const response = await db.query(sql, userId);
 
-    const count = response?.[0].count
+    const count = response?.[0].count;
 
-    return count < 3
+    return count < 3;
   } catch (e) {
-    console.log("Failed to check if a user can create more teams")
+    console.log("Failed to check if a user can create more teams");
   }
 }
 
 export async function getUserSession() {
-  const cookie = (await cookies()).get("session")?.value
-  if (!cookie) throw new Error("Unauthenticated")
-  const session = await decrypt(cookie)
-  if (!session) throw new Error("Invalid session")
-  
-  return session
+  const cookie = (await cookies()).get("session")?.value;
+  if (!cookie) throw new Error("Unauthenticated");
+  const session = await decrypt(cookie);
+  if (!session) throw new Error("Invalid session");
+
+  return session;
 }

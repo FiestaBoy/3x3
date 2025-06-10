@@ -8,7 +8,7 @@ type ReturnType = {
   success: boolean;
   field: keyof FormFields | "root";
   message: string;
-}
+};
 
 export async function loginUser(user: FormFields): Promise<ReturnType> {
   const checkedCredentials: LoginResult = await confirmLoginCredentials(

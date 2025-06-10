@@ -25,7 +25,7 @@ export default function Form() {
 
   const router = useRouter();
 
-  const [rootMessage, setRootMessage] = useState<string | null>(null)
+  const [rootMessage, setRootMessage] = useState<string | null>(null);
 
   const onSubmit: SubmitHandler<FormFields> = async () => {
     const formValues = getValues();
@@ -33,7 +33,7 @@ export default function Form() {
     const response = await loginUser(formValues);
 
     if (!response.success) {
-      setRootMessage(response.message)
+      setRootMessage(response.message);
       return;
     }
     router.push("/");
@@ -78,16 +78,16 @@ export default function Form() {
         {isSubmitting ? "Submitting..." : "Login"}
       </button>
       {rootMessage && (
-          <div className="alert alert-error">
-            <span>{rootMessage}</span>
-            <button
-              className="btn btn-sm btn-ghost ml-2"
-              onClick={() => setRootMessage(null)}
-            >
-              ✕
-            </button>
-          </div>
-    )}
+        <div className="alert alert-error">
+          <span>{rootMessage}</span>
+          <button
+            className="btn btn-sm btn-ghost ml-2"
+            onClick={() => setRootMessage(null)}
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </form>
   );
 }
