@@ -2,7 +2,6 @@ import getMyTeams from "@/src/lib/db/getMyTeams";
 import TeamCard from "./TeamCard";
 
 export default async function TeamGrid() {
-
   const response = await getMyTeams();
 
   return (

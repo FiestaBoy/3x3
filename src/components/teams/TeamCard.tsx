@@ -1,4 +1,5 @@
 import { TeamInfo } from "@/src/lib/db/getMyTeams";
+import Link from "next/link";
 
 export default function TeamCard(team: TeamInfo) {
   return (
@@ -8,6 +9,12 @@ export default function TeamCard(team: TeamInfo) {
         <p className="text-base-content/80">Age Group: {team.ageGroup}</p>
         <p className="text-base-content/80">Your Role: {team.role}</p>
         <p className="text-base-content/80">{team.joinCode}</p>
+        <Link
+          href={`/teams/my-teams/${team.teamId}`}
+          className="btn btn-primary"
+        >
+          {team.role === "captain" ? "Manage Team" : "View Team"}
+        </Link>
       </div>
     </div>
   );

@@ -13,7 +13,7 @@ export type TeamInfo = {
   //captainName: string;
   name: string;
   role: string;
-  teamId: number
+  teamId: number;
 };
 
 export default async function getMyTeams(): Promise<TeamCardType> {
@@ -35,7 +35,7 @@ export default async function getMyTeams(): Promise<TeamCardType> {
       ageGroup: team.age_group,
       joinCode: team?.join_code,
       role: team.role,
-      teamId: team.team_id
+      teamId: team.team_id,
     }));
 
     return { success: true, teams };
