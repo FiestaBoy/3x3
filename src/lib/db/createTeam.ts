@@ -63,10 +63,7 @@ export async function createTeam(team: FormFields): Promise<ReturnType> {
       throw new Error("Failed to create a team");
     }
 
-    const memberSQL =
-      "INSERT INTO team_member (team_id, user_id, role) VALUES (?, ?, ?)";
-
-    await db.query(memberSQL, [teamResult.insertId, session.userId, "captain"]);
+    await createTeamMember(teamResult.insertId, session.userId, "captain");
 
     return {
       success: true,
@@ -81,4 +78,15 @@ export async function createTeam(team: FormFields): Promise<ReturnType> {
       message: "Failed to create a team",
     };
   }
+}
+
+export async function createTeamMember(
+  teamId: string,
+  userId: string,
+  role: string,
+) {
+  const memberSQL =
+    "INSERT INTO team_member (team_id, user_id, role) VALUES (?, ?, ?)";
+
+  await db.query(memberSQL, [teamId, userId, role]);
 }

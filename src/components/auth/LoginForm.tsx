@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { z } from "zod";
+import Button from "../common/Button";
 
 const schema = z.object({
   email: z.string().email({ message: "Invalid email" }),
