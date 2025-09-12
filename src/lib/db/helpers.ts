@@ -1,3 +1,5 @@
+"use server";
+
 import bcrypt from "bcryptjs";
 import {
   AgeGroup,
@@ -115,4 +117,14 @@ export async function getUserSession() {
   if (!session) throw new Error("Invalid session");
 
   return session;
+}
+
+export async function isFullTeam(teamId: string) {
+  const sql = "SELECT COUNT(*) as member_count FROM team_member WHERE team_id = ?"
+
+  const response = db.query(sql, [teamId])
+
+  console.log(response.length)
+
+  return response.length >= 4
 }

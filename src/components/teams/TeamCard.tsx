@@ -1,5 +1,6 @@
 import { TeamInfo } from "@/src/lib/db/getMyTeams";
 import Link from "next/link";
+import Button from "../common/Button";
 
 export default function TeamCard(team: TeamInfo) {
   return (
@@ -8,13 +9,10 @@ export default function TeamCard(team: TeamInfo) {
         <h3 className="card-title text-xl font-semibold">{team.name}</h3>
         <p className="text-base-content/80">Age Group: {team.ageGroup}</p>
         <p className="text-base-content/80">Your Role: {team.role}</p>
-        <p className="text-base-content/80">{team.joinCode}</p>
-        <Link
-          href={`/teams/my-teams/${team.teamId}`}
-          className="btn btn-primary"
-        >
-          {team.role === "captain" ? "Manage Team" : "View Team"}
-        </Link>
+        <p className="text-base-content/80">Join Code: {team.joinCode}</p>
+        <Button className="btn btn-primary">
+            {team.role === "captain" ? "Manage Team" : "View Team"}
+        </Button>
       </div>
     </div>
   );

@@ -23,10 +23,10 @@ export default function JoinForm() {
   const onSubmit: SubmitHandler<FormFields> = async () => {
     const formValues = getValues();
 
-    const response = await joinTeam(formValues.joinCode)
+    const response = await joinTeam(formValues.joinCode);
 
     if (!response.success) {
-      setError("joinCode", {message: response.message})
+      setError("joinCode", { message: response.message });
     }
 
     console.log(formValues);

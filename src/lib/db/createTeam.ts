@@ -51,12 +51,15 @@ export async function createTeam(team: FormFields): Promise<ReturnType> {
 
   try {
     const teamSQL =
-      "INSERT INTO teams (age_group, captain_id, name) VALUES (?, ?, ?);";
+      "INSERT INTO teams (age_group, captain_id, name, join_code) VALUES (?, ?, ?, ?);";
+
+    const joinCode = generateJoinCode();
 
     const teamResult = await db.query(teamSQL, [
       team.ageGroup,
       session.userId,
       team.name,
+      joinCode,
     ]);
 
     if (!teamResult) {
@@ -89,4 +92,13 @@ export async function createTeamMember(
     "INSERT INTO team_member (team_id, user_id, role) VALUES (?, ?, ?)";
 
   await db.query(memberSQL, [teamId, userId, role]);
+}
+
+function generateJoinCode() {
+  const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  let joinCode = "";
+  for (let i = 0; i < 6; i++) {
+    joinCode += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return joinCode
 }
