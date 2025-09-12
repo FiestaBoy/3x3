@@ -1,5 +1,6 @@
 import { SessionPayload } from "@/src/lib/session";
 import Link from "next/link";
+import Button from "../common/Button";
 
 export default function WelcomeCard() {
   return (
@@ -12,7 +13,9 @@ export default function WelcomeCard() {
             basketball tournaments.
           </p>
           <Link href={"/auth/signup"}>
-            <button className="btn btn-secondary btn-wide">Get Started</button>
+            <Button className="btn-wide" priority="secondary">
+              Get Started
+            </Button>
           </Link>
         </div>
       </div>

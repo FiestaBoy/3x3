@@ -8,7 +8,7 @@ type TeamCardType = { success: true; teams: TeamInfo[] } | { success: false };
 
 export type TeamInfo = {
   ageGroup: string;
-  joinCode?: string;
+  joinCode: string;
   //playerCount: number;
   //captainName: string;
   name: string;
@@ -33,7 +33,7 @@ export default async function getMyTeams(): Promise<TeamCardType> {
     const teams: TeamInfo[] = response.map((team: any) => ({
       name: team.name,
       ageGroup: team.age_group,
-      joinCode: team?.join_code,
+      joinCode: team.join_code,
       role: team.role,
       teamId: team.team_id,
     }));

@@ -1,5 +1,5 @@
-import Footer from "../components/common/Footer";
-import Navbar from "../components/common/Navbar";
+import Footer from "../components/layout/Footer";
+import Navbar from "../components/layout/Navbar";
 import { decrypt } from "../lib/session";
 import "./globals.css";
 import { cookies } from "next/headers";

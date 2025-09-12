@@ -1,11 +1,11 @@
 "use client";
 
 import { Menu, CircleUser } from "lucide-react";
-import { useRouter } from "next/navigation";
+// import { useRouter } from "next/navigation";
 import { logOut } from "../../lib/session";
 
 export default function Dropdown() {
-  const router = useRouter();
+  // const router = useRouter();
 
   const handleClick = async () => {
     // if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {

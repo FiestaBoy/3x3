@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { z } from "zod";
+import Button from "../common/Button";
 
 const schema = z
   .object({
@@ -122,13 +123,13 @@ export function Form() {
             )}
           </div>
         ))}
-        <button
-          type="submit"
+        <Button
+          priority="link"
           className="btn self-center"
           disabled={isSubmitting || Object.keys(errors).length > 0}
         >
-          {isSubmitting ? "Submitting..." : "Sign up"}
-        </button>
+          Sign up
+        </Button>
       </form>
     </div>
   );

@@ -1,5 +1,6 @@
 import getMyTeams from "@/src/lib/db/getMyTeams";
 import TeamCard from "./TeamCard";
+import Link from "next/link";
 
 export default async function TeamGrid() {
   const response = await getMyTeams();
@@ -18,7 +19,9 @@ export default async function TeamGrid() {
           />
         ))
       ) : (
-        <p>No Teams Found, Join One!</p>
+        <p>
+          No Teams Found, <Link href={"/teams/join"} className="text-primary">Join One!</Link>
+        </p>
       )}
     </>
   );
