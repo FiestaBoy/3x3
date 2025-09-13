@@ -53,7 +53,7 @@ export async function createTeam(team: FormFields): Promise<ReturnType> {
     const teamSQL =
       "INSERT INTO teams (age_group, captain_id, name, join_code) VALUES (?, ?, ?, ?);";
 
-    const joinCode = generateJoinCode();
+    const joinCode = await generateJoinCode();
 
     const teamResult = await db.query(teamSQL, [
       team.ageGroup,
@@ -94,7 +94,7 @@ export async function createTeamMember(
   await db.query(memberSQL, [teamId, userId, role]);
 }
 
-function generateJoinCode() {
+export async function generateJoinCode() {
   const chars = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
   let joinCode = "";
   for (let i = 0; i < 6; i++) {

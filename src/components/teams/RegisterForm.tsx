@@ -20,6 +20,7 @@ const schema = z.object({
 export type FormFields = z.infer<typeof schema>;
 
 export default function RegisterForm() {
+
   const {
     register,
     handleSubmit,
@@ -44,6 +45,8 @@ export default function RegisterForm() {
       }
       setError(response?.field, { message: response?.message });
     }
+
+    router.push("/teams/my-teams")
   };
 
   return (

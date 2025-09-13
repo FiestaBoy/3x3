@@ -18,11 +18,6 @@ export default function TeamCard(team: TeamInfo) {
     
     try {
       const details = await getTeamDetails(team.teamId);
-      console.log('=== TEAM CARD DEBUG ===');
-      console.log('Team details received:', details);
-      console.log('Members in details:', details?.members);
-      console.log('Members count:', details?.members?.length);
-      console.log('=====================');
       setTeamDetails(details);
     } catch (error) {
       console.error('Error fetching team details:', error);
@@ -63,6 +58,7 @@ export default function TeamCard(team: TeamInfo) {
                 onClose={closeModal}
                 teamDetails={teamDetails}
                 userRole={team.role}
+                onTeamUpdate={async () => await getTeamDetails(team.teamId)}
               />
             ) : (
               <div className="text-center py-8">

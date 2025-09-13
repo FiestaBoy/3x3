@@ -4,6 +4,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { joinTeam } from "@/src/lib/db/joinTeam";
+import { useRouter } from "next/navigation";
 
 const schema = z.object({
   joinCode: z.string(),
@@ -12,6 +13,9 @@ const schema = z.object({
 export type FormFields = z.infer<typeof schema>;
 
 export default function JoinForm() {
+
+  const router = useRouter()
+
   const {
     register,
     handleSubmit,
@@ -29,7 +33,7 @@ export default function JoinForm() {
       setError("joinCode", { message: response.message });
     }
 
-    console.log(formValues);
+    router.push("/teams/my-teams")
   };
 
   return (

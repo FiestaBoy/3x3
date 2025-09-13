@@ -1,6 +1,6 @@
-// src/lib/db/teamActions.ts
 "use server";
 
+import { generateJoinCode } from "./createTeam";
 import { getUserSession } from "./helpers";
 import { revalidatePath } from "next/cache";
 
@@ -38,7 +38,6 @@ export async function getTeamDetails(teamId: number): Promise<TeamDetails | null
   try {
     const session = await getUserSession();
 
-    // Get team details - using correct column names from your teams table
     const teamQuery = `
       SELECT t.team_id, t.name, t.join_code, t.age_group
       FROM teams t
@@ -53,7 +52,6 @@ export async function getTeamDetails(teamId: number): Promise<TeamDetails | null
 
     const team = teamResult[0];
 
-    // Get team members - using correct column names from your team_member table
     const membersQuery = `
       SELECT 
         tm.team_member_id as id,
@@ -74,14 +72,6 @@ export async function getTeamDetails(teamId: number): Promise<TeamDetails | null
     `;
     const members = await db.query(membersQuery, [teamId]);
 
-    console.log('=== DEBUG TEAM MEMBERS ===');
-console.log('Team ID:', teamId);
-console.log('Raw members from DB:', members);
-console.log('Number of members:', members.length);
-console.log('Members query:', membersQuery);
-console.log('========================');
-
-    // Get tournaments (if you have this table, otherwise return empty array)
     let tournaments = [];
     try {
       const tournamentsQuery = `
@@ -103,8 +93,6 @@ console.log('========================');
       `;
       tournaments = await db.query(tournamentsQuery, [teamId]);
     } catch (error) {
-      // If tournaments table doesn't exist, just return empty array
-      console.log('Tournaments table not found, returning empty array');
       tournaments = [];
     }
 
@@ -113,7 +101,7 @@ console.log('========================');
       name: team.name,
       joinCode: team.join_code,
       ageGroup: team.age_group,
-      maxMembers: 4, // Fixed at 4 for 3x3 basketball
+      maxMembers: 4, 
       members: members.map((member: any) => ({
         id: member.id,
         userId: member.user_id,
@@ -141,7 +129,6 @@ export async function removeMemberFromTeam(teamId: number, memberId: number) {
   try {
     const session = await getUserSession();
 
-    // Check if user is captain
     const captainCheck = await db.query(
       'SELECT 1 FROM team_member WHERE team_id = ? AND user_id = ? AND role = "captain"',
       [teamId, session.userId]
@@ -151,7 +138,6 @@ export async function removeMemberFromTeam(teamId: number, memberId: number) {
       return { success: false, message: 'Only captains can remove members' };
     }
 
-    // Remove member
     await db.query('DELETE FROM team_member WHERE team_member_id = ? AND team_id = ?', [memberId, teamId]);
 
     revalidatePath('/teams/my-teams');
@@ -166,7 +152,6 @@ export async function promoteMemberToCaptain(teamId: number, memberId: number) {
   try {
     const session = await getUserSession();
 
-    // Check if user is captain
     const captainCheck = await db.query(
       'SELECT 1 FROM team_member WHERE team_id = ? AND user_id = ? AND role = "captain"',
       [teamId, session.userId]
@@ -176,23 +161,19 @@ export async function promoteMemberToCaptain(teamId: number, memberId: number) {
       return { success: false, message: 'Only captains can promote members' };
     }
 
-    // Start transaction
     await db.query('START TRANSACTION');
 
     try {
-      // Demote current captain to player
       await db.query(
         'UPDATE team_member SET role = "player" WHERE team_id = ? AND user_id = ?',
         [teamId, session.userId]
       );
 
-      // Promote member to captain
       await db.query(
         'UPDATE team_member SET role = "captain" WHERE team_member_id = ? AND team_id = ?',
         [memberId, teamId]
       );
 
-      // Update team captain
       const newCaptainQuery = await db.query(
         'SELECT user_id FROM team_member WHERE team_member_id = ?',
         [memberId]
@@ -221,7 +202,6 @@ export async function leaveTeam(teamId: number) {
   try {
     const session = await getUserSession();
 
-    // Check if user is captain
     const memberCheck = await db.query(
       'SELECT role FROM team_member WHERE team_id = ? AND user_id = ?',
       [teamId, session.userId]
@@ -238,7 +218,6 @@ export async function leaveTeam(teamId: number) {
       };
     }
 
-    // Remove member
     await db.query(
       'DELETE FROM team_member WHERE team_id = ? AND user_id = ?',
       [teamId, session.userId]
@@ -256,7 +235,6 @@ export async function regenerateJoinCode(teamId: number) {
   try {
     const session = await getUserSession();
 
-    // Check if user is captain
     const captainCheck = await db.query(
       'SELECT 1 FROM team_member WHERE team_id = ? AND user_id = ? AND role = "captain"',
       [teamId, session.userId]
@@ -266,23 +244,12 @@ export async function regenerateJoinCode(teamId: number) {
       return { success: false, message: 'Only captains can regenerate join codes' };
     }
 
-    // Generate new join code
-    const generateJoinCode = () => {
-      const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-      let result = '';
-      for (let i = 0; i < 4; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      return result;
-    };
-
     let newCode;
     let attempts = 0;
     const maxAttempts = 5;
 
-    // Generate unique code
     while (attempts < maxAttempts) {
-      newCode = generateJoinCode();
+      newCode = await generateJoinCode()
       
       const existing = await db.query(
         'SELECT 1 FROM teams WHERE join_code = ?',
@@ -299,7 +266,6 @@ export async function regenerateJoinCode(teamId: number) {
       return { success: false, message: 'Failed to generate unique code' };
     }
 
-    // Update team with new code
     await db.query(
       'UPDATE teams SET join_code = ? WHERE team_id = ?',
       [newCode, teamId]
@@ -310,5 +276,50 @@ export async function regenerateJoinCode(teamId: number) {
   } catch (error) {
     console.error('Error regenerating join code:', error);
     return { success: false, message: 'Failed to regenerate join code' };
+  }
+}
+
+export async function deleteTeam(teamId: number) {
+  try {
+    const session = await getUserSession();
+
+    const captainCheck = await db.query(
+      'SELECT 1 FROM team_member WHERE team_id = ? AND user_id = ? AND role = "captain"',
+      [teamId, session.userId]
+    );
+
+    if (!captainCheck || captainCheck.length === 0) {
+      return { success: false, message: 'Only captains can delete teams' };
+    }
+
+    await db.query('START TRANSACTION');
+
+    try {
+      await db.query(
+        'DELETE FROM team_tournament WHERE team_id = ?',
+        [teamId]
+      );
+
+      await db.query(
+        'DELETE FROM team_member WHERE team_id = ?',
+        [teamId]
+      );
+
+      await db.query(
+        'DELETE FROM teams WHERE team_id = ?',
+        [teamId]
+      );
+
+      await db.query('COMMIT');
+
+      revalidatePath('/teams/my-teams');
+      return { success: true, message: 'Team deleted successfully' };
+    } catch (error) {
+      await db.query('ROLLBACK');
+      throw error;
+    }
+  } catch (error) {
+    console.error('Error deleting team:', error);
+    return { success: false, message: 'Failed to delete team' };
   }
 }

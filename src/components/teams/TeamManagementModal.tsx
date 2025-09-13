@@ -1,29 +1,29 @@
-// components/teams/TeamManagementModal.tsx
 "use client";
 
-import { useState, useTransition } from 'react';
-import { X, UserPlus, Trash2, Crown, User, Calendar, MapPin, Users, Copy, RefreshCw } from 'lucide-react';
-import { TeamMember, Tournament, TeamDetails, removeMemberFromTeam, promoteMemberToCaptain, leaveTeam, regenerateJoinCode } from '@/src/lib/db/teamActions';
+import { useState } from 'react';
+import { X, UserPlus, Trash2, Crown, User, Calendar, MapPin, Users, Copy, RefreshCw, AlertTriangle } from 'lucide-react';
+import { TeamMember, Tournament, TeamDetails, removeMemberFromTeam, promoteMemberToCaptain, leaveTeam, regenerateJoinCode, deleteTeam } from '@/src/lib/db/teamActions';
 
 interface TeamManagementModalProps {
   isOpen: boolean;
   onClose: () => void;
   teamDetails: TeamDetails;
   userRole: 'captain' | 'player';
+  onTeamUpdate?: () => void; 
 }
 
 export default function TeamManagementModal({ 
   isOpen, 
   onClose, 
   teamDetails,
-  userRole 
+  userRole,
+  onTeamUpdate 
 }: TeamManagementModalProps) {
   const [activeTab, setActiveTab] = useState<'members' | 'tournaments'>('members');
-  const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-
-  // Debug logging
-  console.log('TeamManagementModal props:', { teamDetails, userRole, isOpen });
+  const [localTeamDetails, setLocalTeamDetails] = useState(teamDetails);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const showMessage = (type: 'success' | 'error', text: string) => {
     setMessage({ type, text });
@@ -31,61 +31,123 @@ export default function TeamManagementModal({
   };
 
   const handleRemoveMember = async (memberId: number) => {
-    if (!confirm('Are you sure you want to remove this member?')) return;
-    
-    startTransition(async () => {
-      const result = await removeMemberFromTeam(teamDetails.id, memberId);
+    setIsLoading(true);
+    try {
+      const result = await removeMemberFromTeam(localTeamDetails.id, memberId);
+      
       if (result.success) {
+        setLocalTeamDetails(prev => ({
+          ...prev,
+          members: prev.members.filter(member => member.id !== memberId)
+        }));
         showMessage('success', result.message);
+        onTeamUpdate?.(); 
       } else {
         showMessage('error', result.message);
       }
-    });
+    } catch (error) {
+      showMessage('error', 'Failed to remove member');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handlePromoteMember = async (memberId: number) => {
-    if (!confirm('Are you sure you want to promote this member to captain? You will become a regular player.')) return;
-    
-    startTransition(async () => {
-      const result = await promoteMemberToCaptain(teamDetails.id, memberId);
+    setIsLoading(true);
+    try {
+      const result = await promoteMemberToCaptain(localTeamDetails.id, memberId);
+      
       if (result.success) {
+        setLocalTeamDetails(prev => ({
+          ...prev,
+          members: prev.members.map(member => 
+            member.id === memberId 
+              ? { ...member, role: 'captain' as const }
+              : member.role === 'captain' 
+                ? { ...member, role: 'player' as const }
+                : member
+          )
+        }));
         showMessage('success', result.message);
+        onTeamUpdate?.();
       } else {
         showMessage('error', result.message);
       }
-    });
+    } catch (error) {
+      showMessage('error', 'Failed to promote member');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleLeaveTeam = async () => {
-    if (!confirm('Are you sure you want to leave this team?')) return;
-    
-    startTransition(async () => {
-      const result = await leaveTeam(teamDetails.id);
+    setIsLoading(true);
+    try {
+      const result = await leaveTeam(localTeamDetails.id);
+      
       if (result.success) {
         showMessage('success', result.message);
-        setTimeout(() => onClose(), 1500);
+        setTimeout(() => {
+          onClose();
+          onTeamUpdate?.();
+        }, 1500);
       } else {
         showMessage('error', result.message);
       }
-    });
+    } catch (error) {
+      showMessage('error', 'Failed to leave team');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteTeam = async () => {
+    setIsLoading(true);
+    try {
+      const result = await deleteTeam(localTeamDetails.id);
+      
+      if (result.success) {
+        showMessage('success', result.message);
+        setTimeout(() => {
+          onClose();
+          onTeamUpdate?.(); 
+        }, 1500);
+      } else {
+        showMessage('error', result.message);
+      }
+    } catch (error) {
+      showMessage('error', 'Failed to delete team');
+    } finally {
+      setIsLoading(false);
+      setShowDeleteConfirm(false);
+    }
   };
 
   const handleRegenerateJoinCode = async () => {
-    if (!confirm('Are you sure you want to regenerate the join code? The old code will no longer work.')) return;
-    
-    startTransition(async () => {
-      const result = await regenerateJoinCode(teamDetails.id);
-      if (result.success) {
+    setIsLoading(true);
+    try {
+      const result = await regenerateJoinCode(localTeamDetails.id);
+      
+      if (result.success && result.joinCode) {
+        setLocalTeamDetails(prev => ({
+          ...prev,
+          joinCode: result.joinCode
+        }));
         showMessage('success', result.message);
+        onTeamUpdate?.();
       } else {
         showMessage('error', result.message);
       }
-    });
+    } catch (error) {
+      showMessage('error', 'Failed to regenerate join code');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const copyJoinCode = async () => {
     try {
-      await navigator.clipboard.writeText(teamDetails.joinCode);
+      await navigator.clipboard.writeText(localTeamDetails.joinCode);
       showMessage('success', 'Join code copied to clipboard!');
     } catch (error) {
       showMessage('error', 'Failed to copy join code');
@@ -105,7 +167,7 @@ export default function TeamManagementModal({
           <button 
             className="btn btn-sm btn-circle btn-ghost" 
             onClick={onClose}
-            disabled={isPending}
+            disabled={isLoading}
           >
             <X size={20} />
           </button>
@@ -120,33 +182,53 @@ export default function TeamManagementModal({
 
         {/* Team Info */}
         <div className="bg-base-200 p-4 rounded-lg mb-6">
-          <h4 className="text-xl font-semibold mb-2">{teamDetails.name}</h4>
-          <div className="flex flex-wrap gap-4 text-sm">
-            <span className="badge badge-outline">Age Group: {teamDetails.ageGroup}</span>
-            <span className="badge badge-outline">
-              <Users size={14} className="mr-1" />
-              {teamDetails.members.length}/{teamDetails.maxMembers} Members
-            </span>
-            <div className="flex items-center gap-2">
-              <span>Join Code: </span>
-              <code 
-                className="bg-base-300 px-2 py-1 rounded cursor-pointer hover:bg-base-100 flex items-center gap-1"
-                onClick={copyJoinCode}
-              >
-                {teamDetails.joinCode}
-                <Copy size={12} />
-              </code>
-              {userRole === 'captain' && (
-                <button 
-                  className="btn btn-xs btn-outline"
-                  onClick={handleRegenerateJoinCode}
-                  disabled={isPending}
-                >
-                  <RefreshCw size={12} />
-                  Regenerate
-                </button>
-              )}
+          <div className="flex justify-between items-start">
+            <div>
+              <h4 className="text-xl font-semibold mb-2">{localTeamDetails.name}</h4>
+              <div className="flex flex-wrap gap-4 text-sm">
+                <span className="badge badge-outline">Age Group: {localTeamDetails.ageGroup}</span>
+                <span className="badge badge-outline">
+                  <Users size={14} className="mr-1" />
+                  {localTeamDetails.members.length}/{localTeamDetails.maxMembers} Members
+                </span>
+                <div className="flex items-center gap-2">
+                  <span>Join Code: </span>
+                  <code 
+                    className="bg-base-300 px-2 py-1 rounded cursor-pointer hover:bg-base-100 flex items-center gap-1"
+                    onClick={copyJoinCode}
+                  >
+                    {localTeamDetails.joinCode}
+                    <Copy size={12} />
+                  </code>
+                  {userRole === 'captain' && (
+                    <button 
+                      className="btn btn-xs btn-outline"
+                      onClick={handleRegenerateJoinCode}
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <span className="loading loading-spinner loading-xs"></span>
+                      ) : (
+                        <RefreshCw size={12} />
+                      )}
+                      Regenerate
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
+            
+            {/* Delete Team Button */}
+            {userRole === 'captain' && (
+              <button 
+                className="btn btn-error btn-outline btn-sm"
+                onClick={() => setShowDeleteConfirm(true)}
+                disabled={isLoading}
+              >
+                <Trash2 size={16} />
+                Delete Team
+              </button>
+            )}
           </div>
         </div>
 
@@ -156,27 +238,27 @@ export default function TeamManagementModal({
             className={`tab ${activeTab === 'members' ? 'tab-active' : ''}`}
             onClick={() => setActiveTab('members')}
           >
-            Team Members ({teamDetails.members.length})
+            Team Members ({localTeamDetails.members.length})
           </button>
           <button 
             className={`tab ${activeTab === 'tournaments' ? 'tab-active' : ''}`}
             onClick={() => setActiveTab('tournaments')}
           >
-            Tournaments ({teamDetails.tournaments.length})
+            Tournaments ({localTeamDetails.tournaments.length})
           </button>
         </div>
 
         {/* Tab Content */}
         {activeTab === 'members' ? (
           <MembersTab 
-            members={teamDetails.members}
+            members={localTeamDetails.members}
             userRole={userRole}
             onRemoveMember={handleRemoveMember}
             onPromoteMember={handlePromoteMember}
-            isPending={isPending}
+            isLoading={isLoading}
           />
         ) : (
-          <TournamentsTab tournaments={teamDetails.tournaments} />
+          <TournamentsTab tournaments={localTeamDetails.tournaments} />
         )}
 
         {/* Action Buttons */}
@@ -185,31 +267,67 @@ export default function TeamManagementModal({
             <button 
               className="btn btn-error btn-outline"
               onClick={handleLeaveTeam}
-              disabled={isPending}
+              disabled={isLoading}
             >
-              {isPending ? <span className="loading loading-spinner loading-sm"></span> : null}
+              {isLoading ? <span className="loading loading-spinner loading-sm"></span> : null}
               Leave Team
             </button>
           )}
-          <button className="btn btn-ghost" onClick={onClose} disabled={isPending}>
+          <button className="btn btn-ghost" onClick={onClose} disabled={isLoading}>
             Close
           </button>
         </div>
       </div>
+
+      {showDeleteConfirm && (
+        <div className="modal modal-open">
+          <div className="modal-box">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertTriangle size={24} className="text-error" />
+              <h3 className="font-bold text-lg">Delete Team</h3>
+            </div>
+            <p className="py-4">
+              Are you sure you want to delete <strong>{localTeamDetails.name}</strong>? 
+              This action cannot be undone and will:
+            </p>
+            <ul className="list-disc list-inside text-sm text-base-content/70 mb-4 space-y-1">
+              <li>Remove all team members</li>
+              <li>Unregister the team from all tournaments</li>
+              <li>Permanently delete all team data</li>
+            </ul>
+            <div className="modal-action">
+              <button 
+                className="btn btn-error"
+                onClick={handleDeleteTeam}
+                disabled={isLoading}
+              >
+                {isLoading ? <span className="loading loading-spinner loading-sm"></span> : null}
+                Yes, Delete Team
+              </button>
+              <button 
+                className="btn btn-ghost" 
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// MembersTab component
 interface MembersTabProps {
   members: TeamMember[];
   userRole: 'captain' | 'player';
   onRemoveMember: (memberId: number) => void;
   onPromoteMember: (memberId: number) => void;
-  isPending: boolean;
+  isLoading: boolean;
 }
 
-function MembersTab({ members, userRole, onRemoveMember, onPromoteMember, isPending }: MembersTabProps) {
+function MembersTab({ members, userRole, onRemoveMember, onPromoteMember, isLoading }: MembersTabProps) {
   return (
     <div className="space-y-3">
       {members.map((member) => (
@@ -246,7 +364,7 @@ function MembersTab({ members, userRole, onRemoveMember, onPromoteMember, isPend
                 className="btn btn-xs btn-outline"
                 onClick={() => onPromoteMember(member.id)}
                 title="Promote to Captain"
-                disabled={isPending}
+                disabled={isLoading}
               >
                 <Crown size={14} />
               </button>
@@ -254,7 +372,7 @@ function MembersTab({ members, userRole, onRemoveMember, onPromoteMember, isPend
                 className="btn btn-xs btn-error btn-outline"
                 onClick={() => onRemoveMember(member.id)}
                 title="Remove Member"
-                disabled={isPending}
+                disabled={isLoading}
               >
                 <Trash2 size={14} />
               </button>
@@ -275,7 +393,6 @@ function MembersTab({ members, userRole, onRemoveMember, onPromoteMember, isPend
   );
 }
 
-// TournamentsTab component
 interface TournamentsTabProps {
   tournaments: Tournament[];
 }
