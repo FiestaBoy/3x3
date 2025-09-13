@@ -12,7 +12,7 @@ export type TeamInfo = {
   //playerCount: number;
   //captainName: string;
   name: string;
-  role: string;
+  role: "captain" | "player";
   teamId: number;
 };
 
