@@ -19,11 +19,11 @@ export async function joinTeam(joinCode: string) {
     }
 
     if (await isFullTeam(response[0].team_id)) {
-        return {
-            success: false,
-            field: "joinCode",
-            message: "Team is full",
-        }
+      return {
+        success: false,
+        field: "joinCode",
+        message: "Team is full",
+      };
     }
 
     await createTeamMember(response[0].team_id, session.userId, "player");

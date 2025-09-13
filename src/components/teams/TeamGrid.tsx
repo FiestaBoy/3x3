@@ -20,7 +20,14 @@ export default async function TeamGrid() {
         ))
       ) : (
         <p>
-          No teams found, <Link href={"/teams/join"} className="text-primary">join one</Link> or <Link href={"/teams/create"} className="text-primary">create one</Link>
+          No teams found,{" "}
+          <Link href={"/teams/join"} className="text-primary">
+            join one
+          </Link>{" "}
+          or{" "}
+          <Link href={"/teams/create"} className="text-primary">
+            create one
+          </Link>
         </p>
       )}
     </>

@@ -13,8 +13,7 @@ const schema = z.object({
 export type FormFields = z.infer<typeof schema>;
 
 export default function JoinForm() {
-
-  const router = useRouter()
+  const router = useRouter();
 
   const {
     register,
@@ -33,7 +32,7 @@ export default function JoinForm() {
       setError("joinCode", { message: response.message });
     }
 
-    router.push("/teams/my-teams")
+    router.push("/teams/my-teams");
   };
 
   return (
