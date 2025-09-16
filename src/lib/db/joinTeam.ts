@@ -8,7 +8,7 @@ const db = require("@/src/lib/db/db");
 export async function joinTeam(joinCode: string) {
   const session = await getUserSession();
   try {
-    const statement = "SELECT team_id from teams WHERE join_code = ?";
+    const statement = "SELECT team_id, age_group from teams WHERE join_code = ?";
 
     const response = await db.query(statement, [joinCode]);
 
@@ -17,6 +17,8 @@ export async function joinTeam(joinCode: string) {
     if (!response || response.length === 0) {
       throw new Error("Join code is invalid");
     }
+
+    // TODO: add age group check for join team
 
     if (await isFullTeam(response[0].team_id)) {
       return {
