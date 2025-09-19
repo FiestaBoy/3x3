@@ -16,5 +16,12 @@ export default async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
+  // if (
+  //   req.nextUrl.pathname.startsWith("/tournaments/create") &&
+  //   session.role !== "organizer"
+  // ) {
+  //   return NextResponse.redirect(new URL("/tournaments", req.url));
+  // }
+
   return NextResponse.next();
 }

@@ -11,7 +11,7 @@ export interface TeamMember {
   userId: number;
   firstName: string;
   lastName: string;
-  role: 'captain' | 'player';
+  role: "captain" | "player";
   joinedAt: string;
 }
 
@@ -21,7 +21,7 @@ export interface Tournament {
   startDate: string;
   endDate: string;
   location: string;
-  status: 'upcoming' | 'ongoing' | 'completed';
+  status: "upcoming" | "ongoing" | "completed";
 }
 
 export interface TeamDetails {
@@ -34,7 +34,9 @@ export interface TeamDetails {
   maxMembers: number;
 }
 
-export async function getTeamDetails(teamId: number): Promise<TeamDetails | null> {
+export async function getTeamDetails(
+  teamId: number,
+): Promise<TeamDetails | null> {
   try {
     const session = await getUserSession();
 
@@ -101,26 +103,26 @@ export async function getTeamDetails(teamId: number): Promise<TeamDetails | null
       name: team.name,
       joinCode: team.join_code,
       ageGroup: team.age_group,
-      maxMembers: 4, 
+      maxMembers: 4,
       members: members.map((member: any) => ({
         id: member.id,
         userId: member.user_id,
         firstName: member.first_name,
         lastName: member.last_name,
         role: member.role,
-        joinedAt: member.joined_at
+        joinedAt: member.joined_at,
       })),
       tournaments: tournaments.map((tournament: any) => ({
         id: tournament.id,
         name: tournament.name,
         startDate: tournament.start_date,
         endDate: tournament.end_date,
-        location: tournament.location || 'TBD',
-        status: tournament.status
-      }))
+        location: tournament.location || "TBD",
+        status: tournament.status,
+      })),
     };
   } catch (error) {
-    console.error('Error fetching team details:', error);
+    console.error("Error fetching team details:", error);
     return null;
   }
 }
@@ -131,20 +133,23 @@ export async function removeMemberFromTeam(teamId: number, memberId: number) {
 
     const captainCheck = await db.query(
       'SELECT 1 FROM team_member WHERE team_id = ? AND user_id = ? AND role = "captain"',
-      [teamId, session.userId]
+      [teamId, session.userId],
     );
 
     if (!captainCheck || captainCheck.length === 0) {
-      return { success: false, message: 'Only captains can remove members' };
+      return { success: false, message: "Only captains can remove members" };
     }
 
-    await db.query('DELETE FROM team_member WHERE team_member_id = ? AND team_id = ?', [memberId, teamId]);
+    await db.query(
+      "DELETE FROM team_member WHERE team_member_id = ? AND team_id = ?",
+      [memberId, teamId],
+    );
 
-    revalidatePath('/teams/my-teams');
-    return { success: true, message: 'Member removed successfully' };
+    revalidatePath("/teams/my-teams");
+    return { success: true, message: "Member removed successfully" };
   } catch (error) {
-    console.error('Error removing member:', error);
-    return { success: false, message: 'Failed to remove member' };
+    console.error("Error removing member:", error);
+    return { success: false, message: "Failed to remove member" };
   }
 }
 
@@ -154,47 +159,50 @@ export async function promoteMemberToCaptain(teamId: number, memberId: number) {
 
     const captainCheck = await db.query(
       'SELECT 1 FROM team_member WHERE team_id = ? AND user_id = ? AND role = "captain"',
-      [teamId, session.userId]
+      [teamId, session.userId],
     );
 
     if (!captainCheck || captainCheck.length === 0) {
-      return { success: false, message: 'Only captains can promote members' };
+      return { success: false, message: "Only captains can promote members" };
     }
 
-    await db.query('START TRANSACTION');
+    await db.query("START TRANSACTION");
 
     try {
       await db.query(
         'UPDATE team_member SET role = "player" WHERE team_id = ? AND user_id = ?',
-        [teamId, session.userId]
+        [teamId, session.userId],
       );
 
       await db.query(
         'UPDATE team_member SET role = "captain" WHERE team_member_id = ? AND team_id = ?',
-        [memberId, teamId]
+        [memberId, teamId],
       );
 
       const newCaptainQuery = await db.query(
-        'SELECT user_id FROM team_member WHERE team_member_id = ?',
-        [memberId]
-      );
-      
-      await db.query(
-        'UPDATE teams SET captain_id = ? WHERE team_id = ?',
-        [newCaptainQuery[0].user_id, teamId]
+        "SELECT user_id FROM team_member WHERE team_member_id = ?",
+        [memberId],
       );
 
-      await db.query('COMMIT');
+      await db.query("UPDATE teams SET captain_id = ? WHERE team_id = ?", [
+        newCaptainQuery[0].user_id,
+        teamId,
+      ]);
 
-      revalidatePath('/teams/my-teams');
-      return { success: true, message: 'Member promoted to captain successfully' };
+      await db.query("COMMIT");
+
+      revalidatePath("/teams/my-teams");
+      return {
+        success: true,
+        message: "Member promoted to captain successfully",
+      };
     } catch (error) {
-      await db.query('ROLLBACK');
+      await db.query("ROLLBACK");
       throw error;
     }
   } catch (error) {
-    console.error('Error promoting member:', error);
-    return { success: false, message: 'Failed to promote member' };
+    console.error("Error promoting member:", error);
+    return { success: false, message: "Failed to promote member" };
   }
 }
 
@@ -203,31 +211,32 @@ export async function leaveTeam(teamId: number) {
     const session = await getUserSession();
 
     const memberCheck = await db.query(
-      'SELECT role FROM team_member WHERE team_id = ? AND user_id = ?',
-      [teamId, session.userId]
+      "SELECT role FROM team_member WHERE team_id = ? AND user_id = ?",
+      [teamId, session.userId],
     );
 
     if (!memberCheck || memberCheck.length === 0) {
-      return { success: false, message: 'Not a member of this team' };
+      return { success: false, message: "Not a member of this team" };
     }
 
-    if (memberCheck[0].role === 'captain') {
-      return { 
-        success: false, 
-        message: 'Captains cannot leave. Transfer captaincy first or delete the team.' 
+    if (memberCheck[0].role === "captain") {
+      return {
+        success: false,
+        message:
+          "Captains cannot leave. Transfer captaincy first or delete the team.",
       };
     }
 
     await db.query(
-      'DELETE FROM team_member WHERE team_id = ? AND user_id = ?',
-      [teamId, session.userId]
+      "DELETE FROM team_member WHERE team_id = ? AND user_id = ?",
+      [teamId, session.userId],
     );
 
-    revalidatePath('/teams/my-teams');
-    return { success: true, message: 'Left team successfully' };
+    revalidatePath("/teams/my-teams");
+    return { success: true, message: "Left team successfully" };
   } catch (error) {
-    console.error('Error leaving team:', error);
-    return { success: false, message: 'Failed to leave team' };
+    console.error("Error leaving team:", error);
+    return { success: false, message: "Failed to leave team" };
   }
 }
 
@@ -237,11 +246,14 @@ export async function regenerateJoinCode(teamId: number) {
 
     const captainCheck = await db.query(
       'SELECT 1 FROM team_member WHERE team_id = ? AND user_id = ? AND role = "captain"',
-      [teamId, session.userId]
+      [teamId, session.userId],
     );
 
     if (!captainCheck || captainCheck.length === 0) {
-      return { success: false, message: 'Only captains can regenerate join codes' };
+      return {
+        success: false,
+        message: "Only captains can regenerate join codes",
+      };
     }
 
     let newCode;
@@ -249,11 +261,11 @@ export async function regenerateJoinCode(teamId: number) {
     const maxAttempts = 5;
 
     while (attempts < maxAttempts) {
-      newCode = await generateJoinCode()
-      
+      newCode = await generateJoinCode();
+
       const existing = await db.query(
-        'SELECT 1 FROM teams WHERE join_code = ?',
-        [newCode]
+        "SELECT 1 FROM teams WHERE join_code = ?",
+        [newCode],
       );
 
       if (!existing || existing.length === 0) {
@@ -263,19 +275,23 @@ export async function regenerateJoinCode(teamId: number) {
     }
 
     if (attempts >= maxAttempts) {
-      return { success: false, message: 'Failed to generate unique code' };
+      return { success: false, message: "Failed to generate unique code" };
     }
 
-    await db.query(
-      'UPDATE teams SET join_code = ? WHERE team_id = ?',
-      [newCode, teamId]
-    );
+    await db.query("UPDATE teams SET join_code = ? WHERE team_id = ?", [
+      newCode,
+      teamId,
+    ]);
 
-    revalidatePath('/teams/my-teams');
-    return { success: true, message: 'Join code regenerated successfully', joinCode: newCode };
+    revalidatePath("/teams/my-teams");
+    return {
+      success: true,
+      message: "Join code regenerated successfully",
+      joinCode: newCode,
+    };
   } catch (error) {
-    console.error('Error regenerating join code:', error);
-    return { success: false, message: 'Failed to regenerate join code' };
+    console.error("Error regenerating join code:", error);
+    return { success: false, message: "Failed to regenerate join code" };
   }
 }
 
@@ -285,41 +301,32 @@ export async function deleteTeam(teamId: number) {
 
     const captainCheck = await db.query(
       'SELECT 1 FROM team_member WHERE team_id = ? AND user_id = ? AND role = "captain"',
-      [teamId, session.userId]
+      [teamId, session.userId],
     );
 
     if (!captainCheck || captainCheck.length === 0) {
-      return { success: false, message: 'Only captains can delete teams' };
+      return { success: false, message: "Only captains can delete teams" };
     }
 
-    await db.query('START TRANSACTION');
+    await db.query("START TRANSACTION");
 
     try {
-      await db.query(
-        'DELETE FROM team_tournament WHERE team_id = ?',
-        [teamId]
-      );
+      await db.query("DELETE FROM team_tournament WHERE team_id = ?", [teamId]);
 
-      await db.query(
-        'DELETE FROM team_member WHERE team_id = ?',
-        [teamId]
-      );
+      await db.query("DELETE FROM team_member WHERE team_id = ?", [teamId]);
 
-      await db.query(
-        'DELETE FROM teams WHERE team_id = ?',
-        [teamId]
-      );
+      await db.query("DELETE FROM teams WHERE team_id = ?", [teamId]);
 
-      await db.query('COMMIT');
+      await db.query("COMMIT");
 
-      revalidatePath('/teams/my-teams');
-      return { success: true, message: 'Team deleted successfully' };
+      revalidatePath("/teams/my-teams");
+      return { success: true, message: "Team deleted successfully" };
     } catch (error) {
-      await db.query('ROLLBACK');
+      await db.query("ROLLBACK");
       throw error;
     }
   } catch (error) {
-    console.error('Error deleting team:', error);
-    return { success: false, message: 'Failed to delete team' };
+    console.error("Error deleting team:", error);
+    return { success: false, message: "Failed to delete team" };
   }
 }

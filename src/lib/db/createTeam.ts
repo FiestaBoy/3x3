@@ -100,5 +100,5 @@ export async function generateJoinCode() {
   for (let i = 0; i < 6; i++) {
     joinCode += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-  return joinCode
+  return joinCode;
 }
