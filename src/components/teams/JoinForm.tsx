@@ -30,7 +30,7 @@ export default function JoinForm() {
 
     if (!response.success) {
       setError("joinCode", { message: response.message });
-      return
+      return;
     }
 
     router.push("/teams/my-teams");

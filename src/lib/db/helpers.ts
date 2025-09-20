@@ -123,9 +123,7 @@ export async function isFullTeam(teamId: string) {
   const sql =
     "SELECT COUNT(*) as member_count FROM team_member WHERE team_id = ?";
 
-  const response = db.query(sql, [teamId]);
+  const response = await db.query(sql, [teamId]);
 
-  console.log(response.length);
-
-  return response.length >= 4;
+  return response[0].member_count >= 4;
 }
