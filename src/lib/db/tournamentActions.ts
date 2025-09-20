@@ -10,19 +10,20 @@ export async function createTournament(data: TournamentFormFields) {
   try {
     const session = await getUserSession();
 
-    if (session.role != 'organizer') {
-      throw new Error("Not an organizer")
+    if (session.role != "organizer") {
+      throw new Error("Not an organizer");
     }
-    
+
     const existingTournament = await db.query(
-      'SELECT tournament_id FROM tournaments WHERE name = ? AND age_group = ?',
-      [data.name, data.ageGroup]
+      "SELECT tournament_id FROM tournaments WHERE name = ? AND age_group = ?",
+      [data.name, data.ageGroup],
     );
 
     if (existingTournament && existingTournament.length > 0) {
-      return { 
-        success: false, 
-        message: 'A tournament with this name already exists for this age group' 
+      return {
+        success: false,
+        message:
+          "A tournament with this name already exists for this age group",
       };
     }
 
@@ -54,24 +55,24 @@ export async function createTournament(data: TournamentFormFields) {
       session.userId,
       data.contactEmail || null,
       data.contactPhone || null,
-      'upcoming'
+      "upcoming",
     ]);
 
     const tournamentId = result.insertId;
 
-    revalidatePath('/tournaments');
+    revalidatePath("/tournaments");
 
-    return { 
-      success: true, 
-      message: 'Tournament created successfully!',
-      tournamentId 
+    return {
+      success: true,
+      message: "Tournament created successfully!",
+      tournamentId,
     };
-
   } catch (error) {
-    console.error('Error creating tournament:', error);
-    return { 
-      success: false, 
-      message: 'Failed to create tournament. Please make sure you are authorized as an organizer' 
+    console.error("Error creating tournament:", error);
+    return {
+      success: false,
+      message:
+        "Failed to create tournament. Please make sure you are authorized as an organizer",
     };
   }
 }
@@ -97,69 +98,70 @@ export async function getTournaments(filters?: {
       FROM tournaments
       WHERE 1=1
     `;
-    
+
     const params: any[] = [];
 
     if (filters?.ageGroup) {
-      query += ' AND age_group = ?';
+      query += " AND age_group = ?";
       params.push(filters.ageGroup);
     }
 
     if (filters?.status) {
-      query += ' AND status = ?';
+      query += " AND status = ?";
       params.push(filters.status);
     }
 
     if (filters?.location) {
-      query += ' AND location LIKE ?';
+      query += " AND location LIKE ?";
       params.push(`%${filters.location}%`);
     }
 
-    query += ' ORDER BY start_date ASC';
+    query += " ORDER BY start_date ASC";
 
     const tournaments = await db.query(query, params);
 
     return { success: true, tournaments };
-
   } catch (error) {
-    console.error('Error fetching tournaments:', error);
+    console.error("Error fetching tournaments:", error);
     return { success: false, tournaments: [] };
   }
 }
 
-export async function updateTournamentStatus(tournamentId: number, status: string) {
+export async function updateTournamentStatus(
+  tournamentId: number,
+  status: string,
+) {
   try {
     const session = await getUserSession();
 
     const tournament = await db.query(
-      'SELECT organizer_id FROM tournaments WHERE tournament_id = ?',
-      [tournamentId]
+      "SELECT organizer_id FROM tournaments WHERE tournament_id = ?",
+      [tournamentId],
     );
 
     if (!tournament.length || tournament[0].organizer_id !== session.userId) {
-      return { 
-        success: false, 
-        message: 'Only tournament organizers can update tournament status' 
+      return {
+        success: false,
+        message: "Only tournament organizers can update tournament status",
       };
     }
 
     await db.query(
-      'UPDATE tournaments SET status = ? WHERE tournament_id = ?',
-      [status, tournamentId]
+      "UPDATE tournaments SET status = ? WHERE tournament_id = ?",
+      [status, tournamentId],
     );
 
-    revalidatePath('/tournaments');
+    revalidatePath("/tournaments");
 
-    return { 
-      success: true, 
-      message: 'Tournament status updated successfully' 
+    return {
+      success: true,
+      message: "Tournament status updated successfully",
     };
-
   } catch (error) {
-    console.error('Error updating tournament status:', error);
-    return { 
-      success: false, 
-      message: 'Failed to update tournament status' 
+    console.error("Error updating tournament status:", error);
+    return {
+      success: false,
+      message: "Failed to update tournament status",
     };
   }
 }

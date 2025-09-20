@@ -55,7 +55,9 @@ export default function TeamCard(team: TeamInfo) {
             >
               {team.joinCode}
               <Copy size={12} className={copied ? "text-success" : ""} />
-              {copied && <span className="text-success text-xs ml-1">Copied!</span>}
+              {copied && (
+                <span className="text-success text-xs ml-1">Copied!</span>
+              )}
             </code>
           </div>
           <Button className="btn-primary w-full mt-2" onClick={openModal}>

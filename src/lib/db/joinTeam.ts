@@ -1,24 +1,35 @@
 "use server";
 
 import { createTeamMember } from "./createTeam";
-import { getUserSession, isFullTeam } from "./helpers";
+import { confirmAgeGroup, getUserSession, isFullTeam } from "./helpers";
 
 const db = require("@/src/lib/db/db");
 
 export async function joinTeam(joinCode: string) {
   const session = await getUserSession();
   try {
-    const statement = "SELECT team_id, age_group from teams WHERE join_code = ?";
+    const statement =
+      "SELECT team_id, age_group from teams WHERE join_code = ?";
 
     const response = await db.query(statement, [joinCode]);
-
-    console.log("get team id repsonse: ", response);
 
     if (!response || response.length === 0) {
       throw new Error("Join code is invalid");
     }
 
-    // TODO: add age group check for join team
+    const ageOK = await confirmAgeGroup(response[0].age_group, session.userId);
+
+    if (!ageOK) {
+      throw new Error("Age confirmation failed");
+    }
+
+    if (!ageOK.result) {
+      return {
+        success: false,
+        field: "joinCode",
+        message: "Age group mismatch",
+      };
+    }
 
     if (await isFullTeam(response[0].team_id)) {
       return {

@@ -43,7 +43,7 @@ export default function RegisterForm() {
         return;
       }
       setError(response?.field, { message: response?.message });
-      return
+      return;
     }
 
     router.push("/teams/my-teams");
