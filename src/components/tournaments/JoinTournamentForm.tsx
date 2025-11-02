@@ -1,0 +1,116 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { SubmitHandler, useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
+
+const schema = z.object({
+  joinCode: z.string(),
+  teamId: z.string().min(1),
+});
+
+export type FormFields = z.infer<typeof schema>;
+
+type Team = { team_id: string; name: string };
+type Props = {
+  teams: Team[];
+  joinAction: (payload: { joinCode: string; teamId: string }) => Promise<any>;
+};
+
+export default function JoinTournamentForm({ teams, joinAction }: Props) {
+  const router = useRouter();
+
+  const {
+    register,
+    handleSubmit,
+    getValues,
+    setError,
+    setValue,
+    formState: { errors, isSubmitting },
+  } = useForm<FormFields>({ resolver: zodResolver(schema), mode: "onSubmit" });
+
+  useEffect(() => {
+    if (teams && teams.length > 0) {
+      setValue("teamId", teams[0].team_id);
+    }
+  }, [teams, setValue]);
+
+  const onSubmit: SubmitHandler<FormFields> = async () => {
+    const { joinCode, teamId } = getValues();
+
+    const response = await joinAction({ joinCode, teamId });
+
+    if (!response?.success) {
+      if (response?.field === "team") {
+        setError("teamId", { message: response.message });
+      } else {
+        setError("joinCode", { message: response.message });
+      }
+      return;
+    }
+
+    router.push("/tournaments");
+  };
+
+  return (
+    <form
+      noValidate
+      onSubmit={handleSubmit(onSubmit)}
+      className="flex flex-col gap-4 w-full"
+    >
+      <div className="form-control w-full">
+        <label className="label">
+          <span className="label-text font-semibold pb-0.75">Tournament Join Code</span>
+        </label>
+
+        <input
+          {...register("joinCode")}
+          aria-label="Tournament Join Code"
+          className={`input input-bordered w-full ${errors["joinCode"] ? "input-error" : ""} focus:input-primary`}
+          type="text"
+        />
+
+        {errors["joinCode"] && (
+          <span className="text-xs text-error mt-1">{errors["joinCode"].message}</span>
+        )}
+      </div>
+
+      <div className="form-control w-full">
+        <label className="label">
+          <span className="label-text font-semibold pb-0.75">Select Team</span>
+        </label>
+
+        <select
+          {...register("teamId")}
+          className={`input input-bordered w-full ${errors["teamId"] ? "input-error" : ""} focus:input-primary`}
+          defaultValue=""
+        >
+          <option value="" disabled>
+            {teams.length === 0 ? "No teams available" : "Choose a team"}
+          </option>
+          {teams.map((t) => (
+            <option key={t.team_id} value={t.team_id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
+
+        {errors["teamId"] && (
+          <span className="text-xs text-error mt-1">{errors["teamId"].message}</span>
+        )}
+      </div>
+
+      <div className="flex justify-center">
+        <button
+          type="submit"
+          className="btn btn-primary w-full max-w-xs"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Registering…" : "Register Team"}
+        </button>
+      </div>
+    </form>
+  );
+}

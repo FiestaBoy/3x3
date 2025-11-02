@@ -120,11 +120,28 @@ export async function getUserSession() {
 }
 
 export async function isFullTeam(teamId: string) {
-  const sql = "SELECT COUNT(*) as member_count FROM team_member WHERE team_id = ?"
+  const sql =
+    "SELECT COUNT(*) as member_count FROM team_member WHERE team_id = ?";
 
-  const response = db.query(sql, [teamId])
+  const response = await db.query(sql, [teamId]);
 
-  console.log(response.length)
+  return response[0].member_count >= 4;
+}
 
-  return response.length >= 4
+export async function getCaptainTeamNames(userId?: string): Promise<{ team_id: string; name: string }[]> {
+  try {
+    if (!userId) {
+      const session = await getUserSession();
+      userId = String(session.userId);
+    }
+
+    const sql = "SELECT team_id, name FROM teams WHERE captain_id = ?";
+    const rows: { team_id: number | string; name: string }[] = await db.query(sql, [userId]);
+
+    if (!Array.isArray(rows) || rows.length === 0) return [];
+    return rows.map((r) => ({ team_id: String(r.team_id), name: r.name }));
+  } catch (e) {
+    console.error("Error fetching captain team names:", e);
+    return [];
+  }
 }
