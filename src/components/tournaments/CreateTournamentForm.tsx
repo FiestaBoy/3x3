@@ -30,8 +30,6 @@ const schema = z
       .number()
       .min(4, { message: "Minimum 4 teams" })
       .max(64, { message: "Maximum 64 teams" }),
-    entryFee: z.number().min(0, { message: "Entry fee cannot be negative" }),
-    prizePool: z.number().min(0, { message: "Prize pool cannot be negative" }),
     format: z.enum([
       "single_elimination",
       "double_elimination",
@@ -42,6 +40,7 @@ const schema = z
       .number()
       .min(5, { message: "Minimum 5 minutes" })
       .max(30, { message: "Maximum 30 minutes" }),
+    isPrivate : z.boolean(),
     contactEmail: z
       .string()
       .email({ message: "Invalid email" })
@@ -83,8 +82,7 @@ export default function CreateTournamentForm() {
     defaultValues: {
       ageGroup: "Adult",
       maxTeams: 16,
-      entryFee: 0,
-      prizePool: 0,
+      isPrivate: false,
       format: "single_elimination",
       gameDuration: 10,
     },
@@ -362,56 +360,21 @@ export default function CreateTournamentForm() {
                 </div>
               </div>
 
-              {/* Financial */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold border-b pb-2">
-                  Fees & Prizes (Optional)
-                </h3>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="form-control">
-                    <label className="label">
-                      <span className="label-text font-medium">
-                        Entry Fee ($)
-                      </span>
-                    </label>
+              {/* isPrivate toggle */}
+                <div className="form-control mt-4">
+                  <label className="label cursor-pointer">
+                    <span className="label-text font-medium">Private Tournament</span>
                     <input
-                      {...register("entryFee", { valueAsNumber: true })}
-                      type="number"
-                      className={`input input-bordered ${errors.entryFee && "input-error"} focus:input-primary`}
-                      placeholder="0.00"
-                      min="0"
-                      step="0.01"
+                      type="checkbox"
+                      {...register("isPrivate")}
+                      className="toggle toggle-primary"
+                      aria-label="Private tournament"
                     />
-                    {errors.entryFee && (
-                      <span className="text-xs text-error mt-1">
-                        {errors.entryFee?.message}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="form-control">
-                    <label className="label">
-                      <span className="label-text font-medium">
-                        Prize Pool ($)
-                      </span>
-                    </label>
-                    <input
-                      {...register("prizePool", { valueAsNumber: true })}
-                      type="number"
-                      className={`input input-bordered ${errors.prizePool && "input-error"} focus:input-primary`}
-                      placeholder="0.00"
-                      min="0"
-                      step="0.01"
-                    />
-                    {errors.prizePool && (
-                      <span className="text-xs text-error mt-1">
-                        {errors.prizePool?.message}
-                      </span>
-                    )}
-                  </div>
+                  </label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Private tournaments won't be listed publicly; only users with the join code can register.
+                  </p>
                 </div>
-              </div>
 
               {/* Contact */}
               <div className="space-y-4">

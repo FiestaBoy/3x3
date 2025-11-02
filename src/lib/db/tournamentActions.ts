@@ -3,6 +3,7 @@
 import { TournamentFormFields } from "@/src/components/tournaments/CreateTournamentForm";
 import { getUserSession } from "./helpers";
 import { revalidatePath } from "next/cache";
+import { generateJoinCode } from "./createTeam";
 
 const db = require("@/src/lib/db/db");
 
@@ -26,14 +27,19 @@ export async function createTournament(data: TournamentFormFields) {
           "A tournament with this name already exists for this age group",
       };
     }
+  
+    const joinCode = data.isPrivate ? await generateJoinCode() : null
+
+    console.log('isPrivate:', data.isPrivate);
+    console.log('joinCode:', joinCode);
 
     const tournamentQuery = `
       INSERT INTO tournaments (
         name, description, start_date, end_date, 
         registration_start, registration_end, location, address, venue_details,
-        age_group, max_teams, entry_fee, prize_pool, format, game_duration,
-        organizer_id, contact_email, contact_phone, status, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        age_group, max_teams, format, game_duration,
+        organizer_id, contact_email, contact_phone, status, created_at, is_private, join_code
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)
     `;
 
     const result = await db.query(tournamentQuery, [
@@ -48,14 +54,14 @@ export async function createTournament(data: TournamentFormFields) {
       data.venueDetails || null,
       data.ageGroup,
       data.maxTeams,
-      data.entryFee,
-      data.prizePool,
       data.format,
       data.gameDuration,
       session.userId,
       data.contactEmail || null,
       data.contactPhone || null,
       "upcoming",
+      data.isPrivate,
+      joinCode
     ]);
 
     const tournamentId = result.insertId;
