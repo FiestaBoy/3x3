@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { SubmitHandler, useForm } from "react-hook-form";
 import { z } from "zod";
-import Button from "../common/Button";
 
 const schema = z
   .object({
@@ -40,7 +39,7 @@ const schema = z
       .number()
       .min(5, { message: "Minimum 5 minutes" })
       .max(30, { message: "Maximum 30 minutes" }),
-    isPrivate : z.boolean(),
+    isPrivate: z.boolean(),
     contactEmail: z
       .string()
       .email({ message: "Invalid email" })
@@ -57,14 +56,14 @@ const schema = z
     {
       message: "Registration end must be after registration start",
       path: ["registrationEnd"],
-    },
+    }
   )
   .refine(
     (data) => new Date(data.registrationEnd) <= new Date(data.startDate),
     {
       message: "Registration must close before tournament starts",
       path: ["registrationEnd"],
-    },
+    }
   );
 
 export type TournamentFormFields = z.infer<typeof schema>;
@@ -74,7 +73,6 @@ export default function CreateTournamentForm() {
     register,
     handleSubmit,
     getValues,
-    setError,
     formState: { errors, isSubmitting },
   } = useForm<TournamentFormFields>({
     resolver: zodResolver(schema),
@@ -89,7 +87,15 @@ export default function CreateTournamentForm() {
   });
 
   const router = useRouter();
-  const [rootMessage, setRootMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+
+  const showMessage = (type: "success" | "error", text: string) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage(null), 5000);
+  };
 
   const onSubmit: SubmitHandler<TournamentFormFields> = async () => {
     const formValues = getValues();
@@ -97,40 +103,65 @@ export default function CreateTournamentForm() {
     const response = await createTournament(formValues);
 
     if (!response.success) {
-      setRootMessage(response.message);
+      showMessage("error", response.message);
       return;
     }
 
-    router.push("/tournaments");
+    showMessage("success", "Tournament created successfully!");
+    setTimeout(() => {
+      router.push("/tournaments");
+    }, 1500);
   };
 
   return (
-    <div className="min-h-screen bg-base-200 py-8">
-      <div className="max-w-3xl mx-auto p-6">
+    <div className="min-h-screen bg-base-200 flex items-center py-8">
+      <div className="w-full max-w-4xl mx-auto p-6">
         <div className="card bg-base-100 shadow-xl">
           <div className="card-body">
-            <h1 className="text-3xl font-bold text-center mb-8">
-              Create New Tournament
-            </h1>
+            <div className="text-center mb-6">
+              <h1 className="text-3xl md:text-4xl font-bold">
+                Create New Tournament
+              </h1>
+              <p className="text-sm text-muted-foreground mt-2">
+                Set up your 3x3 basketball tournament with custom rules and
+                schedule
+              </p>
+            </div>
+
+            {/* Message Alert */}
+            {message && (
+              <div
+                className={`alert ${message.type === "success" ? "alert-success" : "alert-error"} mb-4`}
+              >
+                <span>{message.text}</span>
+              </div>
+            )}
 
             <form
-              className="space-y-8"
+              className="space-y-6"
               onSubmit={handleSubmit(onSubmit)}
               noValidate
             >
-              {/* Tournament Name & Age Group */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="form-control">
+              {/* Basic Info */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold border-b pb-2">
+                  Basic Information
+                </h3>
+
+                <div className="form-control w-full">
                   <label className="label">
-                    <span className="label-text font-medium">
+                    <span className="label-text font-semibold">
                       Tournament Name
+                    </span>
+                    <span className="label-text-alt text-xs text-muted-foreground">
+                      Required
                     </span>
                   </label>
                   <input
                     {...register("name")}
                     type="text"
-                    className={`input input-bordered ${errors.name && "input-error"} focus:input-primary`}
-                    placeholder="Summer 3x3 Championship"
+                    className={`input input-bordered w-full ${errors.name ? "input-error" : ""} focus:input-primary`}
+                    placeholder="e.g., Summer 3x3 Championship"
                   />
                   {errors.name && (
                     <span className="text-xs text-error mt-1">
@@ -139,17 +170,40 @@ export default function CreateTournamentForm() {
                   )}
                 </div>
 
-                <div className="form-control">
+                <div className="form-control w-full">
                   <label className="label">
-                    <span className="label-text font-medium">Age Group</span>
+                    <span className="label-text font-semibold">
+                      Description
+                    </span>
+                    <span className="label-text-alt text-xs text-muted-foreground">
+                      Optional
+                    </span>
+                  </label>
+                  <textarea
+                    {...register("description")}
+                    className={`textarea textarea-bordered w-full ${errors.description ? "textarea-error" : ""} focus:textarea-primary`}
+                    placeholder="Describe your tournament, prizes, or special rules..."
+                    rows={3}
+                  />
+                  {errors.description && (
+                    <span className="text-xs text-error mt-1">
+                      {errors.description?.message}
+                    </span>
+                  )}
+                </div>
+
+                <div className="form-control w-full">
+                  <label className="label">
+                    <span className="label-text font-semibold">Age Group</span>
                   </label>
                   <select
                     {...register("ageGroup")}
-                    className={`select select-bordered ${errors.ageGroup && "select-error"} focus:select-primary`}
+                    className={`select select-bordered w-full ${errors.ageGroup ? "select-error" : ""} focus:select-primary`}
                   >
-                    <option value="U12">U12</option>
-                    <option value="U14">U14</option>
-                    <option value="U16">U16</option>
+                    <option value="U12">U12 (Under 12)</option>
+                    <option value="U14">U14 (Under 14)</option>
+                    <option value="U16">U16 (Under 16)</option>
+                    <option value="U18">U18 (Under 18)</option>
                     <option value="Adult">Adult</option>
                   </select>
                   {errors.ageGroup && (
@@ -160,23 +214,23 @@ export default function CreateTournamentForm() {
                 </div>
               </div>
 
-              {/* Dates */}
+              {/* Schedule */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold border-b pb-2">
                   Schedule
                 </h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="form-control">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="form-control w-full">
                     <label className="label">
-                      <span className="label-text font-medium">
-                        Tournament Start
+                      <span className="label-text font-semibold">
+                        Tournament Start Date
                       </span>
                     </label>
                     <input
                       {...register("startDate")}
                       type="date"
-                      className={`input input-bordered ${errors.startDate && "input-error"} focus:input-primary`}
+                      className={`input input-bordered w-full ${errors.startDate ? "input-error" : ""} focus:input-primary`}
                     />
                     {errors.startDate && (
                       <span className="text-xs text-error mt-1">
@@ -185,16 +239,16 @@ export default function CreateTournamentForm() {
                     )}
                   </div>
 
-                  <div className="form-control">
+                  <div className="form-control w-full">
                     <label className="label">
-                      <span className="label-text font-medium">
-                        Tournament End
+                      <span className="label-text font-semibold">
+                        Tournament End Date
                       </span>
                     </label>
                     <input
                       {...register("endDate")}
                       type="date"
-                      className={`input input-bordered ${errors.endDate && "input-error"}  focus:input-primary`}
+                      className={`input input-bordered w-full ${errors.endDate ? "input-error" : ""} focus:input-primary`}
                     />
                     {errors.endDate && (
                       <span className="text-xs text-error mt-1">
@@ -203,16 +257,16 @@ export default function CreateTournamentForm() {
                     )}
                   </div>
 
-                  <div className="form-control">
+                  <div className="form-control w-full">
                     <label className="label">
-                      <span className="label-text font-medium">
+                      <span className="label-text font-semibold">
                         Registration Opens
                       </span>
                     </label>
                     <input
                       {...register("registrationStart")}
                       type="datetime-local"
-                      className={`input input-bordered ${errors.registrationStart && "input-error"} focus:input-primary`}
+                      className={`input input-bordered w-full ${errors.registrationStart ? "input-error" : ""} focus:input-primary`}
                     />
                     {errors.registrationStart && (
                       <span className="text-xs text-error mt-1">
@@ -221,16 +275,16 @@ export default function CreateTournamentForm() {
                     )}
                   </div>
 
-                  <div className="form-control">
+                  <div className="form-control w-full">
                     <label className="label">
-                      <span className="label-text font-medium">
+                      <span className="label-text font-semibold">
                         Registration Closes
                       </span>
                     </label>
                     <input
                       {...register("registrationEnd")}
                       type="datetime-local"
-                      className={`input input-bordered ${errors.registrationEnd && "input-error"} focus:input-primary`}
+                      className={`input input-bordered w-full ${errors.registrationEnd ? "input-error" : ""} focus:input-primary`}
                     />
                     {errors.registrationEnd && (
                       <span className="text-xs text-error mt-1">
@@ -247,18 +301,21 @@ export default function CreateTournamentForm() {
                   Location
                 </h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="form-control">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="form-control w-full">
                     <label className="label">
-                      <span className="label-text font-medium">
+                      <span className="label-text font-semibold">
                         City/Location
+                      </span>
+                      <span className="label-text-alt text-xs text-muted-foreground">
+                        Required
                       </span>
                     </label>
                     <input
                       {...register("location")}
                       type="text"
-                      className={`input input-bordered ${errors.location && "input-error"} focus:input-primary`}
-                      placeholder="New York, NY"
+                      className={`input input-bordered w-full ${errors.location ? "input-error" : ""} focus:input-primary`}
+                      placeholder="e.g., New York, NY"
                     />
                     {errors.location && (
                       <span className="text-xs text-error mt-1">
@@ -267,16 +324,19 @@ export default function CreateTournamentForm() {
                     )}
                   </div>
 
-                  <div className="form-control">
+                  <div className="form-control w-full">
                     <label className="label">
-                      <span className="label-text font-medium">
-                        Venue Address (Optional)
+                      <span className="label-text font-semibold">
+                        Venue Address
+                      </span>
+                      <span className="label-text-alt text-xs text-muted-foreground">
+                        Optional
                       </span>
                     </label>
                     <input
                       {...register("address")}
                       type="text"
-                      className={`input input-bordered ${errors.address && "input-error"} focus:input-primary`}
+                      className={`input input-bordered w-full ${errors.address ? "input-error" : ""} focus:input-primary`}
                       placeholder="123 Sports Center Ave"
                     />
                     {errors.address && (
@@ -286,22 +346,47 @@ export default function CreateTournamentForm() {
                     )}
                   </div>
                 </div>
+
+                <div className="form-control w-full">
+                  <label className="label">
+                    <span className="label-text font-semibold">
+                      Venue Details
+                    </span>
+                    <span className="label-text-alt text-xs text-muted-foreground">
+                      Optional
+                    </span>
+                  </label>
+                  <textarea
+                    {...register("venueDetails")}
+                    className={`textarea textarea-bordered w-full ${errors.venueDetails ? "textarea-error" : ""} focus:textarea-primary`}
+                    placeholder="Parking info, court details, facilities..."
+                    rows={2}
+                  />
+                  {errors.venueDetails && (
+                    <span className="text-xs text-error mt-1">
+                      {errors.venueDetails?.message}
+                    </span>
+                  )}
+                </div>
               </div>
 
+              {/* Tournament Settings */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold border-b pb-2">
                   Tournament Settings
                 </h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="form-control">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="form-control w-full">
                     <label className="label">
-                      <span className="label-text font-medium">Max Teams</span>
+                      <span className="label-text font-semibold">
+                        Max Teams
+                      </span>
                     </label>
                     <input
                       {...register("maxTeams", { valueAsNumber: true })}
                       type="number"
-                      className={`input input-bordered ${errors.maxTeams && "input-error"} focus:input-primary`}
+                      className={`input input-bordered w-full ${errors.maxTeams ? "input-error" : ""} focus:input-primary`}
                       placeholder="16"
                       min="4"
                       max="64"
@@ -313,13 +398,13 @@ export default function CreateTournamentForm() {
                     )}
                   </div>
 
-                  <div className="form-control">
+                  <div className="form-control w-full">
                     <label className="label">
-                      <span className="label-text font-medium">Format</span>
+                      <span className="label-text font-semibold">Format</span>
                     </label>
                     <select
                       {...register("format")}
-                      className={`select select-bordered ${errors.format && "select-error"} focus:select-primary`}
+                      className={`select select-bordered w-full ${errors.format ? "select-error" : ""} focus:select-primary`}
                     >
                       <option value="single_elimination">
                         Single Elimination
@@ -337,16 +422,16 @@ export default function CreateTournamentForm() {
                     )}
                   </div>
 
-                  <div className="form-control">
+                  <div className="form-control w-full">
                     <label className="label">
-                      <span className="label-text font-medium">
+                      <span className="label-text font-semibold">
                         Game Duration (min)
                       </span>
                     </label>
                     <input
                       {...register("gameDuration", { valueAsNumber: true })}
                       type="number"
-                      className={`input input-bordered ${errors.gameDuration && "input-error"} focus:input-primary`}
+                      className={`input input-bordered w-full ${errors.gameDuration ? "input-error" : ""} focus:input-primary`}
                       placeholder="10"
                       min="5"
                       max="30"
@@ -358,39 +443,44 @@ export default function CreateTournamentForm() {
                     )}
                   </div>
                 </div>
-              </div>
 
-              {/* isPrivate toggle */}
-                <div className="form-control mt-4">
-                  <label className="label cursor-pointer">
-                    <span className="label-text font-medium">Private Tournament</span>
+                <div className="form-control">
+                  <label className="label cursor-pointer justify-start gap-4">
                     <input
                       type="checkbox"
                       {...register("isPrivate")}
                       className="toggle toggle-primary"
-                      aria-label="Private tournament"
                     />
+                    <div className="flex flex-col">
+                      <span className="label-text font-semibold">
+                        Private Tournament
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        Only users with a join code can register
+                      </span>
+                    </div>
                   </label>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Private tournaments won't be listed publicly; only users with the join code can register.
-                  </p>
                 </div>
+              </div>
 
-              {/* Contact */}
+              {/* Contact Info */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold border-b pb-2">
-                  Contact Info (Optional)
+                  Contact Information
+                  <span className="text-xs font-normal text-muted-foreground ml-2">
+                    (Optional)
+                  </span>
                 </h3>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="form-control">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="form-control w-full">
                     <label className="label">
-                      <span className="label-text font-medium">Email</span>
+                      <span className="label-text font-semibold">Email</span>
                     </label>
                     <input
                       {...register("contactEmail")}
                       type="email"
-                      className={`input input-bordered ${errors.contactEmail && "input-error"} focus:input-primary`}
+                      className={`input input-bordered w-full ${errors.contactEmail ? "input-error" : ""} focus:input-primary`}
                       placeholder="tournament@example.com"
                     />
                     {errors.contactEmail && (
@@ -400,14 +490,14 @@ export default function CreateTournamentForm() {
                     )}
                   </div>
 
-                  <div className="form-control">
+                  <div className="form-control w-full">
                     <label className="label">
-                      <span className="label-text font-medium">Phone</span>
+                      <span className="label-text font-semibold">Phone</span>
                     </label>
                     <input
                       {...register("contactPhone")}
                       type="tel"
-                      className={`input input-bordered ${errors.contactPhone && "input-error"} focus:input-primary`}
+                      className={`input input-bordered w-full ${errors.contactPhone ? "input-error" : ""} focus:input-primary`}
                       placeholder="(555) 123-4567"
                     />
                     {errors.contactPhone && (
@@ -419,31 +509,23 @@ export default function CreateTournamentForm() {
                 </div>
               </div>
 
-              {/* Submit */}
-              <div className="pt-6 border-t">
-                <Button
+              {/* Submit Button */}
+              <div className="flex justify-center pt-4">
+                <button
                   type="submit"
-                  className="btn btn-primary btn-lg w-full"
-                  disabled={isSubmitting || Object.keys(errors).length > 0}
+                  className="btn btn-primary w-full max-w-md"
+                  disabled={isSubmitting}
                 >
-                  {isSubmitting
-                    ? "Creating Tournament..."
-                    : "Create Tournament"}
-                </Button>
-                <button></button>
+                  {isSubmitting ? (
+                    <>
+                      <span className="loading loading-spinner loading-sm"></span>
+                      Creating Tournament...
+                    </>
+                  ) : (
+                    "Create Tournament"
+                  )}
+                </button>
               </div>
-
-              {rootMessage && (
-                <div className="alert alert-error">
-                  <span>{rootMessage}</span>
-                  <Button
-                    className="btn btn-sm btn-ghost ml-2"
-                    onClick={() => setRootMessage(null)}
-                  >
-                    ✕
-                  </Button>
-                </div>
-              )}
             </form>
           </div>
         </div>

@@ -31,7 +31,7 @@ export default async function Page() {
         <div className="card bg-base-100 shadow-xl">
           <div className="card-body">
             <div className="text-center mb-4">
-              <h1 className="text-3xl md:text-4xl font-bold">Register Team to Tournament</h1>
+              <h1 className="text-3xl md:text-4xl font-bold">Private Tournament Registration</h1>
             </div>
 
             <div className="w-full">

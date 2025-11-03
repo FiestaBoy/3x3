@@ -24,6 +24,7 @@ import {
   regenerateJoinCode,
   deleteTeam,
 } from "@/src/lib/db/teamActions";
+import Link from "next/link";
 
 interface TeamManagementModalProps {
   isOpen: boolean;
@@ -464,7 +465,7 @@ function TournamentsTab({ tournaments }: TournamentsTabProps) {
       {tournaments.length === 0 ? (
         <div className="text-center py-8 text-base-content/70">
           <Calendar size={48} className="mx-auto mb-4 opacity-50" />
-          <p>No tournaments registered yet</p>
+          <p>No tournaments registered yet. <Link className="text-primary" href={"/tournaments"}>Join one!</Link></p>
         </div>
       ) : (
         tournaments.map((tournament) => (

@@ -30,16 +30,13 @@ export async function createTournament(data: TournamentFormFields) {
   
     const joinCode = data.isPrivate ? await generateJoinCode() : null
 
-    console.log('isPrivate:', data.isPrivate);
-    console.log('joinCode:', joinCode);
-
     const tournamentQuery = `
       INSERT INTO tournaments (
         name, description, start_date, end_date, 
         registration_start, registration_end, location, address, venue_details,
         age_group, max_teams, format, game_duration,
-        organizer_id, contact_email, contact_phone, status, created_at, is_private, join_code
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)
+        organizer_id, contact_email, contact_phone, created_at, is_private, join_code
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)
     `;
 
     const result = await db.query(tournamentQuery, [
@@ -59,7 +56,6 @@ export async function createTournament(data: TournamentFormFields) {
       session.userId,
       data.contactEmail || null,
       data.contactPhone || null,
-      "upcoming",
       data.isPrivate,
       joinCode
     ]);
@@ -85,21 +81,28 @@ export async function createTournament(data: TournamentFormFields) {
 
 export async function getTournaments(filters?: {
   ageGroup?: string;
-  status?: string;
   location?: string;
+  isPrivate?: boolean;
 }) {
   try {
     let query = `
       SELECT 
         tournament_id,
         name,
+        description,
         start_date,
         end_date,
+        registration_start,
+        registration_end,
         location,
+        address,
+        venue_details,
         age_group,
         max_teams,
-        entry_fee,
-        status,
+        format,
+        game_duration,
+        contact_email,
+        contact_phone,
         (SELECT COUNT(*) FROM team_tournament WHERE tournament_id = tournaments.tournament_id) as registered_teams
       FROM tournaments
       WHERE 1=1
@@ -112,14 +115,14 @@ export async function getTournaments(filters?: {
       params.push(filters.ageGroup);
     }
 
-    if (filters?.status) {
-      query += " AND status = ?";
-      params.push(filters.status);
-    }
-
-    if (filters?.location) {
+    if (filters?.location != null) {
       query += " AND location LIKE ?";
       params.push(`%${filters.location}%`);
+    }
+
+    if (filters?.isPrivate !== undefined) {
+      query += " AND is_private = ?";
+      params.push(filters.isPrivate ? 1 : 0);
     }
 
     query += " ORDER BY start_date ASC";
@@ -133,41 +136,224 @@ export async function getTournaments(filters?: {
   }
 }
 
-export async function updateTournamentStatus(
-  tournamentId: number,
-  status: string,
-) {
+export async function joinPublicTournament(tournamentId: string, teamId: string) {
   try {
     const session = await getUserSession();
 
-    const tournament = await db.query(
-      "SELECT organizer_id FROM tournaments WHERE tournament_id = ?",
-      [tournamentId],
+    // Verify team captain
+    const captainCheck = await db.query(
+      "SELECT captain_id FROM teams WHERE team_id = ?",
+      [teamId]
     );
 
-    if (!tournament.length || tournament[0].organizer_id !== session.userId) {
-      return {
-        success: false,
-        message: "Only tournament organizers can update tournament status",
-      };
+    if (!captainCheck || captainCheck.length === 0) {
+      return { success: false, message: "Team not found" };
     }
 
+    if (String(captainCheck[0].captain_id) !== String(session.userId)) {
+      return { success: false, message: "Only team captains can register teams" };
+    }
+
+    // Check if already registered
+    const existingReg = await db.query(
+      "SELECT 1 FROM team_tournament WHERE tournament_id = ? AND team_id = ?",
+      [tournamentId, teamId]
+    );
+
+    if (existingReg && existingReg.length > 0) {
+      return { success: false, message: "Team already registered" };
+    }
+
+    // Check tournament capacity
+    const capacityCheck = await db.query(
+      "SELECT max_teams, (SELECT COUNT(*) FROM team_tournament WHERE tournament_id = ?) as current_teams FROM tournaments WHERE tournament_id = ?",
+      [tournamentId, tournamentId]
+    );
+
+    if (capacityCheck && capacityCheck.length > 0) {
+      const { max_teams, current_teams } = capacityCheck[0];
+      if (current_teams >= max_teams) {
+        return { success: false, message: "Tournament is full" };
+      }
+    }
+
+    // Register team
     await db.query(
-      "UPDATE tournaments SET status = ? WHERE tournament_id = ?",
-      [status, tournamentId],
+      "INSERT INTO team_tournament (tournament_id, team_id) VALUES (?, ?)",
+      [tournamentId, teamId]
     );
 
     revalidatePath("/tournaments");
 
+    return { success: true, message: "Team registered successfully!" };
+  } catch (error) {
+    console.error("Error joining tournament:", error);
+    return { success: false, message: "Failed to register team" };
+  }
+}
+
+export async function getJoinedTournaments() {
+  try {
+    const session = await getUserSession();
+
+    const query = `
+      SELECT 
+        t.*,
+        teams.name as team_name,
+        (SELECT COUNT(*) FROM team_tournament WHERE tournament_id = t.tournament_id) as registered_teams
+      FROM tournaments t
+      INNER JOIN team_tournament tt ON t.tournament_id = tt.tournament_id
+      INNER JOIN teams ON tt.team_id = teams.team_id
+      WHERE teams.captain_id = ? OR teams.team_id IN (
+        SELECT team_id FROM team_member WHERE user_id = ?
+      )
+      ORDER BY t.start_date ASC
+    `;
+
+    const tournaments = await db.query(query, [session.userId, session.userId]);
+
+    return { success: true, tournaments };
+  } catch (error) {
+    console.error("Error fetching joined tournaments:", error);
+    return { success: false, tournaments: [] };
+  }
+}
+
+export async function getHostedTournaments() {
+  try {
+    const session = await getUserSession();
+
+    const query = `
+      SELECT 
+        t.*,
+        (SELECT COUNT(*) FROM team_tournament WHERE tournament_id = t.tournament_id) as registered_teams
+      FROM tournaments t
+      WHERE t.organizer_id = ?
+      ORDER BY t.start_date DESC
+    `;
+
+    const tournaments = await db.query(query, [session.userId]);
+
+    return { success: true, tournaments };
+  } catch (error) {
+    console.error("Error fetching hosted tournaments:", error);
+    return { success: false, tournaments: [] };
+  }
+}
+
+export async function withdrawFromTournament(tournamentId: string) {
+  try {
+    const session = await getUserSession();
+
+    // Get the team_id for the current user in this tournament
+    const teamQuery = `
+      SELECT tt.team_id 
+      FROM team_tournament tt
+      INNER JOIN teams t ON tt.team_id = t.team_id
+      WHERE tt.tournament_id = ? AND t.captain_id = ?
+    `;
+
+    const teamResult = await db.query(teamQuery, [tournamentId, session.userId]);
+
+    if (!teamResult || teamResult.length === 0) {
+      return { success: false, message: "Team not found in tournament" };
+    }
+
+    const teamId = teamResult[0].team_id;
+
+    // Delete the registration
+    await db.query(
+      "DELETE FROM team_tournament WHERE tournament_id = ? AND team_id = ?",
+      [tournamentId, teamId]
+    );
+
+    revalidatePath("/tournaments");
+
+    return { success: true, message: "Successfully withdrawn from tournament" };
+  } catch (error) {
+    console.error("Error withdrawing from tournament:", error);
+    return { success: false, message: "Failed to withdraw from tournament" };
+  }
+}
+
+export async function getTournamentTeams(tournamentId: string) {
+  try {
+    const query = `
+      SELECT 
+        t.team_id,
+        t.name,
+        t.age_group,
+        CONCAT(u.first_name, ' ', u.last_name) as captain_name,
+        (SELECT COUNT(*) FROM team_member WHERE team_id = t.team_id) as member_count,
+        tt.registered_at
+      FROM teams t
+      INNER JOIN team_tournament tt ON t.team_id = tt.team_id
+      INNER JOIN users u ON t.captain_id = u.user_id
+      WHERE tt.tournament_id = ?
+      ORDER BY tt.registered_at ASC
+    `;
+
+    const teams = await db.query(query, [tournamentId]);
+
+    return { success: true, teams };
+  } catch (error) {
+    console.error("Error fetching tournament teams:", error);
+    return { success: false, teams: [] };
+  }
+}
+
+export async function regenerateTournamentJoinCode(tournamentId: string) {
+  try {
+    const session = await getUserSession();
+
+    // Check if user is the organizer
+    const organizerCheck = await db.query(
+      "SELECT 1 FROM tournaments WHERE tournament_id = ? AND organizer_id = ?",
+      [tournamentId, session.userId]
+    );
+
+    if (!organizerCheck || organizerCheck.length === 0) {
+      return {
+        success: false,
+        message: "Only organizers can regenerate join codes",
+      };
+    }
+
+    let newCode;
+    let attempts = 0;
+    const maxAttempts = 5;
+
+    while (attempts < maxAttempts) {
+      newCode = await generateJoinCode();
+
+      const existing = await db.query(
+        "SELECT 1 FROM tournaments WHERE join_code = ?",
+        [newCode]
+      );
+
+      if (!existing || existing.length === 0) {
+        break;
+      }
+      attempts++;
+    }
+
+    if (attempts >= maxAttempts) {
+      return { success: false, message: "Failed to generate unique code" };
+    }
+
+    await db.query("UPDATE tournaments SET join_code = ? WHERE tournament_id = ?", [
+      newCode,
+      tournamentId,
+    ]);
+
+    revalidatePath("/tournaments");
     return {
       success: true,
-      message: "Tournament status updated successfully",
+      message: "Join code regenerated successfully",
+      joinCode: newCode,
     };
   } catch (error) {
-    console.error("Error updating tournament status:", error);
-    return {
-      success: false,
-      message: "Failed to update tournament status",
-    };
+    console.error("Error regenerating join code:", error);
+    return { success: false, message: "Failed to regenerate join code" };
   }
 }
