@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   X,
   Calendar,
@@ -14,6 +14,8 @@ import {
   LogOut,
 } from "lucide-react";
 import { withdrawFromTournament } from "@/src/lib/db/tournamentActions";
+import { getTeamSchedule } from "@/src/lib/db/matchScheduler";
+
 
 interface JoinedTournamentDetailsModalProps {
   isOpen: boolean;
@@ -34,6 +36,27 @@ export default function JoinedTournamentDetailsModal({
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [teamMatches, setTeamMatches] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (isOpen && activeTab === "schedule" && tournament.team_id) {
+      loadTeamSchedule();
+    }
+  }, [isOpen, activeTab]);
+
+  const loadTeamSchedule = async () => {
+    setIsLoading(true);
+    try {
+      const result = await getTeamSchedule(tournamentId, tournament.team_id);
+      if (result.success) {
+        setTeamMatches(result.matches);
+      }
+    } catch (error) {
+      console.error("Failed to load schedule:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const showMessage = (type: "success" | "error", text: string) => {
     setMessage({ type, text });
@@ -41,10 +64,6 @@ export default function JoinedTournamentDetailsModal({
   };
 
   const handleWithdraw = async () => {
-    if (!confirm("Are you sure you want to withdraw from this tournament? This action cannot be undone.")) {
-      return;
-    }
-
     setIsLoading(true);
     try {
       const result = await withdrawFromTournament(tournamentId);
@@ -95,7 +114,8 @@ export default function JoinedTournamentDetailsModal({
   const canWithdraw = () => {
     const now = new Date();
     const tournamentStart = new Date(tournament.start_date);
-    return now < tournamentStart;
+    const isCaptain = tournament.user_role === "captain";
+    return now < tournamentStart && isCaptain;
   };
 
   if (!isOpen) return null;
@@ -161,7 +181,7 @@ export default function JoinedTournamentDetailsModal({
         )}
 
         {activeTab === "schedule" && (
-          <ScheduleTab />
+          <ScheduleTab matches={teamMatches} isLoading={isLoading} />
         )}
 
         {/* Action Buttons */}
@@ -302,14 +322,107 @@ function BracketTab() {
   );
 }
 
-function ScheduleTab() {
+interface ScheduleTabProps {
+  matches: any[];
+  isLoading: boolean;
+}
+
+function ScheduleTab({ matches, isLoading }: ScheduleTabProps) {
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "completed":
+        return <span className="badge badge-success">Completed</span>;
+      case "in_progress":
+        return <span className="badge badge-warning">Live</span>;
+      case "scheduled":
+        return <span className="badge badge-info">Upcoming</span>;
+      default:
+        return <span className="badge badge-ghost">Pending</span>;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
+    );
+  }
+
+  if (matches.length === 0) {
+    return (
+      <div className="bg-base-200 p-8 rounded-lg text-center">
+        <Calendar size={48} className="mx-auto mb-4 text-base-content/50" />
+        <h4 className="font-semibold mb-2">No Matches Scheduled</h4>
+        <p className="text-sm text-base-content/70">
+          Your team's match schedule will appear here once the organizer schedules the matches.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-base-200 p-8 rounded-lg text-center">
-      <Calendar size={48} className="mx-auto mb-4 text-base-content/50" />
-      <h4 className="font-semibold mb-2">Match Schedule</h4>
-      <p className="text-sm text-base-content/70">
-        Your team's match schedule will appear here once matches are scheduled by the organizer.
-      </p>
+    <div className="space-y-3">
+      {matches.map((match) => (
+        <div key={match.game_id} className="card bg-base-200">
+          <div className="card-body p-4">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h5 className="font-semibold">
+                  Round {match.round_number} - Game #{match.game_number}
+                </h5>
+                {match.scheduled_time && (
+                  <p className="text-sm text-base-content/70">
+                    {formatDateTime(match.scheduled_time)}
+                  </p>
+                )}
+              </div>
+              {getStatusBadge(match.game_status)}
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-center">
+                <span className={match.winner_team_id === match.team1_id ? "font-bold" : ""}>
+                  {match.team1_name}
+                </span>
+                {match.team1_score !== null && (
+                  <span className="text-lg font-bold">{match.team1_score}</span>
+                )}
+              </div>
+
+              <div className="text-center text-xs font-semibold text-base-content/50">
+                VS
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span className={match.winner_team_id === match.team2_id ? "font-bold" : ""}>
+                  {match.team2_name}
+                </span>
+                {match.team2_score !== null && (
+                  <span className="text-lg font-bold">{match.team2_score}</span>
+                )}
+              </div>
+            </div>
+
+            {match.court_number && (
+              <div className="text-xs text-base-content/60 mt-2">
+                <MapPin size={12} className="inline mr-1" />
+                {match.court_number}
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

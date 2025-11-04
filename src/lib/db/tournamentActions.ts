@@ -200,6 +200,12 @@ export async function getJoinedTournaments() {
       SELECT 
         t.*,
         teams.name as team_name,
+        teams.team_id,
+        teams.captain_id,
+        CASE 
+          WHEN teams.captain_id = ? THEN 'captain'
+          ELSE 'player'
+        END as user_role,
         (SELECT COUNT(*) FROM team_tournament WHERE tournament_id = t.tournament_id) as registered_teams
       FROM tournaments t
       INNER JOIN team_tournament tt ON t.tournament_id = tt.tournament_id
@@ -210,7 +216,11 @@ export async function getJoinedTournaments() {
       ORDER BY t.start_date ASC
     `;
 
-    const tournaments = await db.query(query, [session.userId, session.userId]);
+    const tournaments = await db.query(query, [
+      session.userId,
+      session.userId,
+      session.userId,
+    ]);
 
     return { success: true, tournaments };
   } catch (error) {
@@ -245,26 +255,41 @@ export async function withdrawFromTournament(tournamentId: string) {
   try {
     const session = await getUserSession();
 
-    // Get the team_id for the current user in this tournament
+    // Get the team_id and verify the user is the captain
     const teamQuery = `
-      SELECT tt.team_id 
+      SELECT tt.team_id, t.captain_id
       FROM team_tournament tt
       INNER JOIN teams t ON tt.team_id = t.team_id
-      WHERE tt.tournament_id = ? AND t.captain_id = ?
+      WHERE tt.tournament_id = ? 
+        AND (t.captain_id = ? OR t.team_id IN (
+          SELECT team_id FROM team_member WHERE user_id = ?
+        ))
     `;
 
-    const teamResult = await db.query(teamQuery, [tournamentId, session.userId]);
+    const teamResult = await db.query(teamQuery, [
+      tournamentId,
+      session.userId,
+      session.userId,
+    ]);
 
     if (!teamResult || teamResult.length === 0) {
       return { success: false, message: "Team not found in tournament" };
     }
 
-    const teamId = teamResult[0].team_id;
+    const { team_id, captain_id } = teamResult[0];
+
+    // Only captains can withdraw their team
+    if (String(captain_id) !== String(session.userId)) {
+      return {
+        success: false,
+        message: "Only team captains can withdraw from tournaments",
+      };
+    }
 
     // Delete the registration
     await db.query(
       "DELETE FROM team_tournament WHERE tournament_id = ? AND team_id = ?",
-      [tournamentId, teamId]
+      [tournamentId, team_id]
     );
 
     revalidatePath("/tournaments");

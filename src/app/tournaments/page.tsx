@@ -74,9 +74,9 @@ export default async function Page() {
           <>
             <div className="divider">JOINED TOURNAMENTS</div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {joinedResponse.tournaments.map((tournament: any) => (
+              {joinedResponse.tournaments.map((tournament: any, index: any) => (
                 <JoinedTournamentCard
-                  key={tournament.tournament_id}
+                  key={`${tournament.name}-${index}`}
                   tournament={tournament}
                 />
               ))}

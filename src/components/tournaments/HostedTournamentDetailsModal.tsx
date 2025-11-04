@@ -14,8 +14,13 @@ import {
   Settings,
   PlayCircle,
   RefreshCw,
+  Clipboard,
 } from "lucide-react";
 import { getTournamentTeams, regenerateTournamentJoinCode } from "@/src/lib/db/tournamentActions";
+import ScheduleMatchesModal from "./ScheduleMatchesModal";
+import BracketVisualization from "./BracketVisualization";
+import MatchManagement from "./MatchManagement";
+import { getTournamentSchedule } from "@/src/lib/db/matchScheduler";
 
 interface HostedTournamentDetailsModalProps {
   isOpen: boolean;
@@ -30,7 +35,7 @@ export default function HostedTournamentDetailsModal({
   tournamentId,
   tournament,
 }: HostedTournamentDetailsModalProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "teams" | "bracket" | "settings">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "teams" | "matches" | "bracket" | "settings">("overview");
   const [teams, setTeams] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -39,6 +44,30 @@ export default function HostedTournamentDetailsModal({
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [matches, setMatches] = useState<any[]>([]);
+  const [scheduleGenerated, setScheduleGenerated] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && (activeTab === "bracket" || activeTab === "matches")) {
+      loadMatches();
+    }
+  }, [isOpen, activeTab, scheduleGenerated]);
+
+  const loadMatches = async () => {
+    setIsLoading(true);
+    try {
+      const result = await getTournamentSchedule(tournamentId);
+      if (result.success) {
+        setMatches(result.matches);
+        setScheduleGenerated(result.matches.length > 0);
+      }
+    } catch (error) {
+      console.error("Failed to load matches:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen && activeTab === "teams") {
@@ -125,123 +154,172 @@ export default function HostedTournamentDetailsModal({
   if (!isOpen) return null;
 
   return (
-    <div className="modal modal-open">
-      <div className="modal-box w-11/12 max-w-5xl">
-        {/* Header */}
-        <div className="flex justify-between items-start mb-6">
-          <div>
-            <h3 className="font-bold text-2xl mb-2">{tournament.name}</h3>
-            <div className="flex gap-2">
-              {tournament.is_private === 1 && (
-                <span className="badge badge-secondary">Private Tournament</span>
-              )}
-              <span className="badge badge-outline">Organizer View</span>
-            </div>
-          </div>
-          <button
-            className="btn btn-sm btn-circle btn-ghost"
-            onClick={onClose}
-          >
-            <X size={20} />
-          </button>
-        </div>
-
-        {/* Join Code for Private Tournaments */}
-        {tournament.is_private === 1 && currentJoinCode && (
-          <div className="alert mb-4 bg-primary/10 border border-primary">
-            <div className="flex-1">
-              <div className="text-sm font-semibold mb-2">Tournament Join Code</div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <code className="text-lg font-mono bg-base-100 px-4 py-2 rounded border-2 border-primary">
-                  {currentJoinCode}
-                </code>
-                <button
-                  className="btn btn-sm btn-primary"
-                  onClick={handleCopyJoinCode}
-                  disabled={isLoading}
-                >
-                  <Copy size={16} />
-                  {copied ? "Copied!" : "Copy"}
-                </button>
-                <button
-                  className="btn btn-sm btn-outline"
-                  onClick={handleRegenerateJoinCode}
-                  disabled={isLoading}
-                >
-                  <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
-                  Regenerate
-                </button>
+    <>
+      <div className="modal modal-open">
+        <div className="modal-box w-11/12 max-w-5xl max-h-[90vh] overflow-y-auto">
+          {/* Header */}
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <h3 className="font-bold text-2xl mb-2">{tournament.name}</h3>
+              <div className="flex gap-2">
+                {tournament.is_private === 1 && (
+                  <span className="badge badge-secondary">Private Tournament</span>
+                )}
+                <span className="badge badge-outline">Organizer View</span>
               </div>
             </div>
+            <button
+              className="btn btn-sm btn-circle btn-ghost"
+              onClick={onClose}
+            >
+              <X size={20} />
+            </button>
           </div>
-        )}
 
-        {/* Message Alert */}
-        {message && (
-          <div
-            className={`alert ${message.type === "success" ? "alert-success" : "alert-error"} mb-4`}
-          >
-            <span>{message.text}</span>
+          {/* Join Code for Private Tournaments */}
+          {tournament.is_private === 1 && currentJoinCode && (
+            <div className="alert mb-4 bg-primary/10 border border-primary">
+              <div className="flex-1">
+                <div className="text-sm font-semibold mb-2">Tournament Join Code</div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <code className="text-lg font-mono bg-base-100 px-4 py-2 rounded border-2 border-primary">
+                    {currentJoinCode}
+                  </code>
+                  <button
+                    className="btn btn-sm btn-primary"
+                    onClick={handleCopyJoinCode}
+                    disabled={isLoading}
+                  >
+                    <Copy size={16} />
+                    {copied ? "Copied!" : "Copy"}
+                  </button>
+                  <button
+                    className="btn btn-sm btn-outline"
+                    onClick={handleRegenerateJoinCode}
+                    disabled={isLoading}
+                  >
+                    <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
+                    Regenerate
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Message Alert */}
+          {message && (
+            <div
+              className={`alert ${message.type === "success" ? "alert-success" : "alert-error"} mb-4`}
+            >
+              <span>{message.text}</span>
+            </div>
+          )}
+
+          {/* Tabs */}
+          <div className="tabs tabs-bordered mb-4 overflow-x-auto">
+            <button
+              className={`tab ${activeTab === "overview" ? "tab-active" : ""}`}
+              onClick={() => setActiveTab("overview")}
+            >
+              <Calendar size={16} className="mr-2" />
+              Overview
+            </button>
+            <button
+              className={`tab ${activeTab === "teams" ? "tab-active" : ""}`}
+              onClick={() => setActiveTab("teams")}
+            >
+              <Users size={16} className="mr-2" />
+              Teams ({tournament.registered_teams || 0})
+            </button>
+            <button
+              className={`tab ${activeTab === "matches" ? "tab-active" : ""}`}
+              onClick={() => setActiveTab("matches")}
+            >
+              <Clipboard size={16} className="mr-2" />
+              Match Management
+              {scheduleGenerated && matches.filter(m => m.game_status === 'scheduled').length > 0 && (
+                <span className="badge badge-sm badge-primary ml-2">
+                  {matches.filter(m => m.game_status === 'scheduled').length}
+                </span>
+              )}
+            </button>
+            <button
+              className={`tab ${activeTab === "bracket" ? "tab-active" : ""}`}
+              onClick={() => setActiveTab("bracket")}
+            >
+              <Trophy size={16} className="mr-2" />
+              Bracket View
+            </button>
+            <button
+              className={`tab ${activeTab === "settings" ? "tab-active" : ""}`}
+              onClick={() => setActiveTab("settings")}
+            >
+              <Settings size={16} className="mr-2" />
+              Settings
+            </button>
           </div>
-        )}
 
-        {/* Tabs */}
-        <div className="tabs tabs-bordered mb-4">
-          <button
-            className={`tab ${activeTab === "overview" ? "tab-active" : ""}`}
-            onClick={() => setActiveTab("overview")}
-          >
-            <Calendar size={16} className="mr-2" />
-            Overview
-          </button>
-          <button
-            className={`tab ${activeTab === "teams" ? "tab-active" : ""}`}
-            onClick={() => setActiveTab("teams")}
-          >
-            <Users size={16} className="mr-2" />
-            Teams ({tournament.registered_teams || 0})
-          </button>
-          <button
-            className={`tab ${activeTab === "bracket" ? "tab-active" : ""}`}
-            onClick={() => setActiveTab("bracket")}
-          >
-            <Trophy size={16} className="mr-2" />
-            Bracket & Matches
-          </button>
-          <button
-            className={`tab ${activeTab === "settings" ? "tab-active" : ""}`}
-            onClick={() => setActiveTab("settings")}
-          >
-            <Settings size={16} className="mr-2" />
-            Settings
-          </button>
-        </div>
+          {/* Tab Content */}
+          {activeTab === "overview" && (
+            <OverviewTab 
+              tournament={tournament} 
+              formatDate={formatDate} 
+              formatDateTime={formatDateTime} 
+              formatTournamentFormat={formatTournamentFormat} 
+            />
+          )}
 
-        {/* Tab Content */}
-        {activeTab === "overview" && (
-          <OverviewTab tournament={tournament} formatDate={formatDate} formatDateTime={formatDateTime} formatTournamentFormat={formatTournamentFormat} />
-        )}
+          {activeTab === "teams" && (
+            <TeamsTab teams={teams} isLoading={isLoading} />
+          )}
 
-        {activeTab === "teams" && (
-          <TeamsTab teams={teams} isLoading={isLoading} />
-        )}
+          {activeTab === "matches" && (
+            <MatchesTab 
+              tournament={tournament}
+              matches={matches}
+              scheduleGenerated={scheduleGenerated}
+              onScheduleClick={() => setShowScheduleModal(true)}
+              onUpdate={loadMatches}
+              isLoading={isLoading}
+            />
+          )}
 
-        {activeTab === "bracket" && (
-          <BracketTab tournament={tournament} />
-        )}
+          {activeTab === "bracket" && (
+            <BracketTab 
+              tournament={tournament} 
+              matches={matches}
+              scheduleGenerated={scheduleGenerated}
+              onScheduleClick={() => setShowScheduleModal(true)}
+              isLoading={isLoading}
+            />
+          )}
 
-        {activeTab === "settings" && (
-          <SettingsTab tournament={tournament} />
-        )}
+          {activeTab === "settings" && (
+            <SettingsTab tournament={tournament} />
+          )}
 
-        {/* Action Buttons */}
-        <div className="modal-action">
-          <button className="btn btn-ghost" onClick={onClose}>
-            Close
-          </button>
+          {/* Action Buttons */}
+          <div className="modal-action">
+            <button className="btn btn-ghost" onClick={onClose}>
+              Close
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+
+      {showScheduleModal && (
+        <ScheduleMatchesModal
+          isOpen={showScheduleModal}
+          onClose={() => setShowScheduleModal(false)}
+          tournamentId={tournamentId}
+          tournament={tournament}
+          onScheduleGenerated={() => {
+            setScheduleGenerated(true);
+            loadMatches();
+          }}
+        />
+      )}
+    </>
   );
 }
 
@@ -399,44 +477,155 @@ function TeamsTab({ teams, isLoading }: TeamsTabProps) {
   );
 }
 
-interface BracketTabProps {
+interface MatchesTabProps {
   tournament: any;
+  matches: any[];
+  scheduleGenerated: boolean;
+  onScheduleClick: () => void;
+  onUpdate: () => void;
+  isLoading: boolean;
 }
 
-function BracketTab({ tournament }: BracketTabProps) {
+function MatchesTab({ tournament, matches, scheduleGenerated, onScheduleClick, onUpdate, isLoading }: MatchesTabProps) {
   const canStartTournament = () => {
     const registeredTeams = tournament.registered_teams || 0;
     return registeredTeams >= 4;
   };
 
-  return (
-    <div className="space-y-6">
-      <div className="alert alert-info">
-        <PlayCircle size={20} />
-        <div>
-          <h4 className="font-semibold">Match Scheduling</h4>
-          <p className="text-sm">
-            {canStartTournament()
-              ? "You can now schedule matches and generate the tournament bracket."
-              : `Need at least 4 teams to start. Currently: ${tournament.registered_teams || 0} teams.`}
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
+    );
+  }
+
+  if (!scheduleGenerated) {
+    return (
+      <div className="space-y-6">
+        <div className="alert alert-info">
+          <PlayCircle size={20} />
+          <div>
+            <h4 className="font-semibold">Match Scheduling Required</h4>
+            <p className="text-sm">
+              {canStartTournament()
+                ? "Generate the tournament schedule to start managing matches."
+                : `Need at least 4 teams to start. Currently: ${tournament.registered_teams || 0} teams.`}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-base-200 p-8 rounded-lg text-center">
+          <Clipboard size={48} className="mx-auto mb-4 text-base-content/50" />
+          <h4 className="font-semibold mb-2">Match Management</h4>
+          <p className="text-sm text-base-content/70 mb-4">
+            Enter match results, track progress, and manage the tournament flow.
           </p>
+          <button
+            className="btn btn-primary"
+            disabled={!canStartTournament()}
+            onClick={onScheduleClick}
+          >
+            <PlayCircle size={16} />
+            Generate Schedule
+          </button>
         </div>
       </div>
+    );
+  }
 
-      <div className="bg-base-200 p-8 rounded-lg text-center">
-        <Trophy size={48} className="mx-auto mb-4 text-base-content/50" />
-        <h4 className="font-semibold mb-2">Tournament Bracket & Match Scheduling</h4>
-        <p className="text-sm text-base-content/70 mb-4">
-          Match scheduling and bracket management will be available here.
-        </p>
-        <button
-          className="btn btn-primary"
-          disabled={!canStartTournament()}
-        >
-          <PlayCircle size={16} />
-          Schedule Matches
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h4 className="font-semibold text-lg">Match Management</h4>
+          <p className="text-sm text-base-content/70">
+            Enter results to progress the tournament bracket
+          </p>
+        </div>
+        <button className="btn btn-sm btn-outline" onClick={onScheduleClick}>
+          <Settings size={16} />
+          Regenerate Schedule
         </button>
       </div>
+
+      <MatchManagement matches={matches} onUpdate={onUpdate} />
+    </div>
+  );
+}
+
+interface BracketTabProps {
+  tournament: any;
+  matches: any[];
+  scheduleGenerated: boolean;
+  onScheduleClick: () => void;
+  isLoading: boolean;
+}
+
+function BracketTab({ tournament, matches, scheduleGenerated, onScheduleClick, isLoading }: BracketTabProps) {
+  const canStartTournament = () => {
+    const registeredTeams = tournament.registered_teams || 0;
+    return registeredTeams >= 4;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
+    );
+  }
+
+  if (!scheduleGenerated) {
+    return (
+      <div className="space-y-6">
+        <div className="alert alert-info">
+          <PlayCircle size={20} />
+          <div>
+            <h4 className="font-semibold">Match Scheduling</h4>
+            <p className="text-sm">
+              {canStartTournament()
+                ? "You can now schedule matches and generate the tournament bracket."
+                : `Need at least 4 teams to start. Currently: ${tournament.registered_teams || 0} teams.`}
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-base-200 p-8 rounded-lg text-center">
+          <Trophy size={48} className="mx-auto mb-4 text-base-content/50" />
+          <h4 className="font-semibold mb-2">Tournament Bracket & Match Scheduling</h4>
+          <p className="text-sm text-base-content/70 mb-4">
+            Generate a complete tournament schedule with automatic bracket creation and time assignments.
+          </p>
+          <button
+            className="btn btn-primary"
+            disabled={!canStartTournament()}
+            onClick={onScheduleClick}
+          >
+            <PlayCircle size={16} />
+            Schedule Matches
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h4 className="font-semibold text-lg">Tournament Bracket</h4>
+          <p className="text-sm text-base-content/70">
+            Visual representation of the tournament progression
+          </p>
+        </div>
+        <button className="btn btn-sm btn-outline" onClick={onScheduleClick}>
+          <Settings size={16} />
+          Regenerate
+        </button>
+      </div>
+
+      <BracketVisualization matches={matches} tournament={tournament} />
     </div>
   );
 }
