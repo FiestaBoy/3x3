@@ -19,11 +19,20 @@ export default function ScheduleMatchesModal({
   tournament,
   onScheduleGenerated,
 }: ScheduleMatchesModalProps) {
+  // Get default start date/time from tournament or use current date
+  const getDefaultDateTime = () => {
+    const tournamentDate = new Date(tournament.start_date);
+    const year = tournamentDate.getFullYear();
+    const month = String(tournamentDate.getMonth() + 1).padStart(2, '0');
+    const day = String(tournamentDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}T09:00`;
+  };
+
   const [formData, setFormData] = useState({
     numberOfCourts: 2,
     gameDurationMinutes: 15,
     breakDurationMinutes: 5,
-    tournamentStartDateTime: "",
+    tournamentStartDate: getDefaultDateTime(),
     numberOfDays: 1,
     dailyStartTime: "09:00",
     dailyEndTime: "18:00",
@@ -42,16 +51,6 @@ export default function ScheduleMatchesModal({
     setResult(null);
 
     try {
-      // Validate start date/time
-      if (!formData.tournamentStartDateTime) {
-        setResult({
-          type: "error",
-          message: "Please select tournament start date and time",
-        });
-        setIsGenerating(false);
-        return;
-      }
-
       // Validate daily time window
       const startTime = formData.dailyStartTime.split(":").map(Number);
       const endTime = formData.dailyEndTime.split(":").map(Number);
@@ -67,12 +66,23 @@ export default function ScheduleMatchesModal({
         return;
       }
 
+      // Validate start date is not in the past
+      const startDate = new Date(formData.tournamentStartDate);
+      if (startDate < new Date()) {
+        setResult({
+          type: "error",
+          message: "Tournament start date cannot be in the past",
+        });
+        setIsGenerating(false);
+        return;
+      }
+
       const response = await generateTournamentSchedule({
         tournamentId,
         numberOfCourts: formData.numberOfCourts,
         gameDurationMinutes: formData.gameDurationMinutes,
         breakDurationMinutes: formData.breakDurationMinutes,
-        tournamentStartDateTime: formData.tournamentStartDateTime,
+        tournamentStartDate: formData.tournamentStartDate,
         numberOfDays: formData.numberOfDays,
         dailyStartTime: formData.dailyStartTime,
         dailyEndTime: formData.dailyEndTime,
@@ -151,23 +161,34 @@ export default function ScheduleMatchesModal({
           </button>
         </div>
 
-        {/* Tournament Info */}
-        <div className="alert alert-info mb-6">
-          <div className="flex items-start gap-3">
-            <Calendar size={20} className="mt-0.5" />
-            <div className="flex-1">
-              <div className="font-semibold mb-1">Tournament Details</div>
-              <div className="text-sm space-y-1">
-                <div>Format: {tournament.format.replace(/_/g, " ").toUpperCase()}</div>
-                <div>Registered Teams: {tournament.registered_teams || 0}</div>
-                <div>Age Group: {tournament.age_group}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Tournament Start Date/Time */}
+          <div className="space-y-4">
+            <h4 className="font-semibold flex items-center gap-2">
+              <Calendar size={18} />
+              Tournament Start
+            </h4>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">Start Date & Time</span>
+              </label>
+              <input
+                type="datetime-local"
+                className="input input-bordered"
+                value={formData.tournamentStartDate}
+                onChange={(e) => handleInputChange("tournamentStartDate", e.target.value)}
+                required
+              />
+              <label className="label">
+                <span className="label-text-alt">
+                  When should the first match begin?
+                </span>
+              </label>
+            </div>
+          </div>
+
           {/* Court Configuration */}
           <div className="space-y-4">
             <h4 className="font-semibold flex items-center gap-2">
@@ -238,47 +259,20 @@ export default function ScheduleMatchesModal({
                   }
                   required
                 />
-                <label className="label">
-                  <span className="label-text-alt">
-                    Break time applies between ALL games
-                  </span>
-                </label>
               </div>
             </div>
           </div>
 
-          {/* Tournament Schedule */}
+          {/* Daily Schedule */}
           <div className="space-y-4">
             <h4 className="font-semibold flex items-center gap-2">
               <Calendar size={18} />
-              Tournament Schedule
+              Daily Schedule
             </h4>
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-medium">
-                  Tournament Start Date & Time
-                </span>
-              </label>
-              <input
-                type="datetime-local"
-                className="input input-bordered"
-                value={formData.tournamentStartDateTime}
-                onChange={(e) =>
-                  handleInputChange("tournamentStartDateTime", e.target.value)
-                }
-                required
-              />
-              <label className="label">
-                <span className="label-text-alt">
-                  When should the first game start?
-                </span>
-              </label>
-            </div>
-
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text font-medium">Number of Days</span>
+                <span className="label-text font-medium">Number of Tournament Days</span>
               </label>
               <input
                 type="number"
@@ -291,11 +285,6 @@ export default function ScheduleMatchesModal({
                 }
                 required
               />
-              <label className="label">
-                <span className="label-text-alt">
-                  How many days are courts available?
-                </span>
-              </label>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

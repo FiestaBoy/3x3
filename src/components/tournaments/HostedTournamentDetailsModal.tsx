@@ -15,8 +15,14 @@ import {
   PlayCircle,
   RefreshCw,
   Clipboard,
+  Save,
+  AlertTriangle,
+  Trash2,
+  Edit3,
+  Lock,
+  Unlock,
 } from "lucide-react";
-import { getTournamentTeams, regenerateTournamentJoinCode } from "@/src/lib/db/tournamentActions";
+import { getTournamentTeams, regenerateTournamentJoinCode, deleteTournament, updateTournamentSettings } from "@/src/lib/db/tournamentActions";
 import ScheduleMatchesModal from "./ScheduleMatchesModal";
 import BracketVisualization from "./BracketVisualization";
 import MatchManagement from "./MatchManagement";
@@ -295,7 +301,14 @@ export default function HostedTournamentDetailsModal({
           )}
 
           {activeTab === "settings" && (
-            <SettingsTab tournament={tournament} />
+            <SettingsTab 
+              tournament={tournament} 
+              onClose={onClose}
+              onUpdate={() => {
+                // Reload tournament data
+                window.location.reload();
+              }}
+            />
           )}
 
           {/* Action Buttons */}
@@ -632,27 +645,686 @@ function BracketTab({ tournament, matches, scheduleGenerated, onScheduleClick, i
 
 interface SettingsTabProps {
   tournament: any;
+  onClose: () => void;
+  onUpdate: () => void;
 }
 
-function SettingsTab({ tournament }: SettingsTabProps) {
+function SettingsTab({ tournament, onClose, onUpdate }: SettingsTabProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+
+  const [formData, setFormData] = useState({
+    name: tournament.name || "",
+    description: tournament.description || "",
+    startDate: tournament.start_date?.split("T")[0] || "",
+    endDate: tournament.end_date?.split("T")[0] || "",
+    registrationStart: tournament.registration_start?.split("T")[0] || "",
+    registrationEnd: tournament.registration_end?.split("T")[0] || "",
+    location: tournament.location || "",
+    address: tournament.address || "",
+    venueDetails: tournament.venue_details || "",
+    ageGroup: tournament.age_group || "",
+    maxTeams: tournament.max_teams || 8,
+    format: tournament.format || "single_elimination",
+    gameDuration: tournament.game_duration || 10,
+    contactEmail: tournament.contact_email || "",
+    contactPhone: tournament.contact_phone || "",
+    isPrivate: tournament.is_private === 1,
+  });
+
+  const hasSchedule = tournament.registered_teams > 0; // Basic check
+  const canEdit = !hasSchedule;
+
+  const showMessage = (type: "success" | "error", text: string) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage(null), 5000);
+  };
+
+  const handleSave = async () => {
+    if (!canEdit) {
+      showMessage("error", "Cannot edit tournament after schedule is generated");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const result = await updateTournamentSettings(tournament.tournament_id, formData);
+
+      if (result.success) {
+        showMessage("success", result.message);
+        setIsEditing(false);
+        onUpdate();
+      } else {
+        showMessage("error", result.message);
+      }
+    } catch (error) {
+      showMessage("error", "Failed to update tournament settings");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const result = await deleteTournament(tournament.tournament_id);
+
+      if (result.success) {
+        showMessage("success", result.message);
+        setTimeout(() => {
+          onClose();
+          window.location.reload();
+        }, 1500);
+      } else {
+        showMessage("error", result.message);
+        setShowDeleteConfirm(false);
+      }
+    } catch (error) {
+      showMessage("error", "Failed to delete tournament");
+      setShowDeleteConfirm(false);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setFormData({
+      name: tournament.name || "",
+      description: tournament.description || "",
+      startDate: tournament.start_date?.split("T")[0] || "",
+      endDate: tournament.end_date?.split("T")[0] || "",
+      registrationStart: tournament.registration_start?.split("T")[0] || "",
+      registrationEnd: tournament.registration_end?.split("T")[0] || "",
+      location: tournament.location || "",
+      address: tournament.address || "",
+      venueDetails: tournament.venue_details || "",
+      ageGroup: tournament.age_group || "",
+      maxTeams: tournament.max_teams || 8,
+      format: tournament.format || "single_elimination",
+      gameDuration: tournament.game_duration || 10,
+      contactEmail: tournament.contact_email || "",
+      contactPhone: tournament.contact_phone || "",
+      isPrivate: tournament.is_private === 1,
+    });
+    setIsEditing(false);
+  };
+
   return (
     <div className="space-y-6">
-      <div className="alert alert-warning">
-        <Settings size={20} />
+      {/* Header with Edit Button */}
+      <div className="flex justify-between items-center">
         <div>
-          <h4 className="font-semibold">Tournament Settings</h4>
-          <p className="text-sm">
-            Tournament settings and management options will be available here.
+          <h4 className="font-semibold text-lg">Tournament Settings</h4>
+          <p className="text-sm text-base-content/70">
+            {canEdit
+              ? "Modify tournament configuration before generating schedule"
+              : "Settings locked after schedule generation"}
           </p>
+        </div>
+        {!isEditing && canEdit && (
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => setIsEditing(true)}
+          >
+            <Edit3 size={16} />
+            Edit Settings
+          </button>
+        )}
+      </div>
+
+      {/* Message Alert */}
+      {message && (
+        <div
+          className={`alert ${message.type === "success" ? "alert-success" : "alert-error"}`}
+        >
+          <span>{message.text}</span>
+        </div>
+      )}
+
+      {/* Lock Warning */}
+      {!canEdit && (
+        <div className="alert alert-warning">
+          <Lock size={20} />
+          <div>
+            <h4 className="font-semibold">Settings Locked</h4>
+            <p className="text-sm">
+              Tournament settings cannot be modified after the schedule has been generated
+              or teams have registered.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Basic Information */}
+      <div className="card bg-base-200">
+        <div className="card-body">
+          <h5 className="card-title text-base flex items-center gap-2">
+            <Trophy size={18} />
+            Basic Information
+          </h5>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">Tournament Name</span>
+              </label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  className="input input-bordered"
+                  value={formData.name}
+                  onChange={(e) =>
+                    setFormData({ ...formData, name: e.target.value })
+                  }
+                />
+              ) : (
+                <p className="text-sm font-semibold">{formData.name}</p>
+              )}
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">Age Group</span>
+              </label>
+              {isEditing ? (
+                <select
+                  className="select select-bordered"
+                  value={formData.ageGroup}
+                  onChange={(e) =>
+                    setFormData({ ...formData, ageGroup: e.target.value })
+                  }
+                >
+                  <option value="U12">U12</option>
+                  <option value="U14">U14</option>
+                  <option value="U16">U16</option>
+                  <option value="Adult">Adult</option>
+                </select>
+              ) : (
+                <p className="text-sm font-semibold">{formData.ageGroup}</p>
+              )}
+            </div>
+
+            <div className="form-control md:col-span-2">
+              <label className="label">
+                <span className="label-text font-medium">Description</span>
+              </label>
+              {isEditing ? (
+                <textarea
+                  className="textarea textarea-bordered h-24"
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  placeholder="Tournament description..."
+                />
+              ) : (
+                <p className="text-sm text-base-content/70">
+                  {formData.description || "No description"}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="bg-base-200 p-8 rounded-lg text-center">
-        <Settings size={48} className="mx-auto mb-4 text-base-content/50" />
-        <h4 className="font-semibold mb-2">Settings Coming Soon</h4>
-        <p className="text-sm text-base-content/70">
-          Edit tournament details, manage registrations, and configure advanced settings.
-        </p>
+      {/* Tournament Format */}
+      <div className="card bg-base-200">
+        <div className="card-body">
+          <h5 className="card-title text-base flex items-center gap-2">
+            <Trophy size={18} />
+            Tournament Format
+          </h5>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">Format Type</span>
+              </label>
+              {isEditing ? (
+                <select
+                  className="select select-bordered"
+                  value={formData.format}
+                  onChange={(e) =>
+                    setFormData({ ...formData, format: e.target.value })
+                  }
+                >
+                  <option value="single_elimination">Single Elimination</option>
+                  <option value="double_elimination">Double Elimination</option>
+                  <option value="round_robin">Round Robin</option>
+                  <option value="group_stage">Group Stage + Knockout</option>
+                </select>
+              ) : (
+                <p className="text-sm font-semibold">
+                  {formData.format
+                    .split("_")
+                    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+                    .join(" ")}
+                </p>
+              )}
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">Max Teams</span>
+              </label>
+              {isEditing ? (
+                <input
+                  type="number"
+                  className="input input-bordered"
+                  value={formData.maxTeams}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      maxTeams: parseInt(e.target.value) || 8,
+                    })
+                  }
+                  min="4"
+                  max="64"
+                />
+              ) : (
+                <p className="text-sm font-semibold">
+                  {formData.maxTeams} teams
+                </p>
+              )}
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">Game Duration</span>
+              </label>
+              {isEditing ? (
+                <input
+                  type="number"
+                  className="input input-bordered"
+                  value={formData.gameDuration}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      gameDuration: parseInt(e.target.value) || 10,
+                    })
+                  }
+                  min="5"
+                  max="60"
+                />
+              ) : (
+                <p className="text-sm font-semibold">
+                  {formData.gameDuration} minutes
+                </p>
+              )}
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">Privacy</span>
+              </label>
+              {isEditing ? (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    className="toggle toggle-primary"
+                    checked={formData.isPrivate}
+                    onChange={(e) =>
+                      setFormData({ ...formData, isPrivate: e.target.checked })
+                    }
+                  />
+                  <span className="text-sm">
+                    {formData.isPrivate ? (
+                      <>
+                        <Lock size={14} className="inline mr-1" />
+                        Private (Requires Join Code)
+                      </>
+                    ) : (
+                      <>
+                        <Unlock size={14} className="inline mr-1" />
+                        Public
+                      </>
+                    )}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-sm font-semibold">
+                  {formData.isPrivate ? (
+                    <>
+                      <Lock size={14} className="inline mr-1" />
+                      Private
+                    </>
+                  ) : (
+                    <>
+                      <Unlock size={14} className="inline mr-1" />
+                      Public
+                    </>
+                  )}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Dates & Schedule */}
+      <div className="card bg-base-200">
+        <div className="card-body">
+          <h5 className="card-title text-base flex items-center gap-2">
+            <Calendar size={18} />
+            Dates & Schedule
+          </h5>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">Start Date</span>
+              </label>
+              {isEditing ? (
+                <input
+                  type="date"
+                  className="input input-bordered"
+                  value={formData.startDate}
+                  onChange={(e) =>
+                    setFormData({ ...formData, startDate: e.target.value })
+                  }
+                />
+              ) : (
+                <p className="text-sm font-semibold">
+                  {new Date(formData.startDate).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">End Date</span>
+              </label>
+              {isEditing ? (
+                <input
+                  type="date"
+                  className="input input-bordered"
+                  value={formData.endDate}
+                  onChange={(e) =>
+                    setFormData({ ...formData, endDate: e.target.value })
+                  }
+                />
+              ) : (
+                <p className="text-sm font-semibold">
+                  {new Date(formData.endDate).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">
+                  Registration Opens
+                </span>
+              </label>
+              {isEditing ? (
+                <input
+                  type="date"
+                  className="input input-bordered"
+                  value={formData.registrationStart}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      registrationStart: e.target.value,
+                    })
+                  }
+                />
+              ) : (
+                <p className="text-sm font-semibold">
+                  {new Date(formData.registrationStart).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">
+                  Registration Closes
+                </span>
+              </label>
+              {isEditing ? (
+                <input
+                  type="date"
+                  className="input input-bordered"
+                  value={formData.registrationEnd}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      registrationEnd: e.target.value,
+                    })
+                  }
+                />
+              ) : (
+                <p className="text-sm font-semibold">
+                  {new Date(formData.registrationEnd).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Location & Venue */}
+      <div className="card bg-base-200">
+        <div className="card-body">
+          <h5 className="card-title text-base flex items-center gap-2">
+            <MapPin size={18} />
+            Location & Venue
+          </h5>
+
+          <div className="grid grid-cols-1 gap-4">
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">City/Location</span>
+              </label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  className="input input-bordered"
+                  value={formData.location}
+                  onChange={(e) =>
+                    setFormData({ ...formData, location: e.target.value })
+                  }
+                />
+              ) : (
+                <p className="text-sm font-semibold">{formData.location}</p>
+              )}
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">Venue Address</span>
+              </label>
+              {isEditing ? (
+                <input
+                  type="text"
+                  className="input input-bordered"
+                  value={formData.address}
+                  onChange={(e) =>
+                    setFormData({ ...formData, address: e.target.value })
+                  }
+                  placeholder="Full address"
+                />
+              ) : (
+                <p className="text-sm text-base-content/70">
+                  {formData.address || "No address provided"}
+                </p>
+              )}
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">Venue Details</span>
+              </label>
+              {isEditing ? (
+                <textarea
+                  className="textarea textarea-bordered h-20"
+                  value={formData.venueDetails}
+                  onChange={(e) =>
+                    setFormData({ ...formData, venueDetails: e.target.value })
+                  }
+                  placeholder="Parking info, directions, etc..."
+                />
+              ) : (
+                <p className="text-sm text-base-content/70">
+                  {formData.venueDetails || "No venue details provided"}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Contact Information */}
+      <div className="card bg-base-200">
+        <div className="card-body">
+          <h5 className="card-title text-base flex items-center gap-2">
+            <Mail size={18} />
+            Contact Information
+          </h5>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">Contact Email</span>
+              </label>
+              {isEditing ? (
+                <input
+                  type="email"
+                  className="input input-bordered"
+                  value={formData.contactEmail}
+                  onChange={(e) =>
+                    setFormData({ ...formData, contactEmail: e.target.value })
+                  }
+                  placeholder="organizer@example.com"
+                />
+              ) : (
+                <p className="text-sm font-semibold">
+                  {formData.contactEmail || "Not provided"}
+                </p>
+              )}
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-medium">Contact Phone</span>
+              </label>
+              {isEditing ? (
+                <input
+                  type="tel"
+                  className="input input-bordered"
+                  value={formData.contactPhone}
+                  onChange={(e) =>
+                    setFormData({ ...formData, contactPhone: e.target.value })
+                  }
+                  placeholder="+1 (555) 123-4567"
+                />
+              ) : (
+                <p className="text-sm font-semibold">
+                  {formData.contactPhone || "Not provided"}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      {isEditing && (
+        <div className="flex gap-2 justify-end">
+          <button
+            className="btn btn-ghost"
+            onClick={handleCancel}
+            disabled={isSaving}
+          >
+            Cancel
+          </button>
+          <button
+            className="btn btn-primary"
+            onClick={handleSave}
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <>
+                <span className="loading loading-spinner loading-sm"></span>
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save size={16} />
+                Save Changes
+              </>
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Danger Zone */}
+      <div className="card bg-error/10 border border-error">
+        <div className="card-body">
+          <h5 className="card-title text-base text-error flex items-center gap-2">
+            <AlertTriangle size={18} />
+            Danger Zone
+          </h5>
+
+          <p className="text-sm text-base-content/70 mb-4">
+            Permanently delete this tournament. This action cannot be undone.
+          </p>
+
+          {!showDeleteConfirm ? (
+            <button
+              className="btn btn-error btn-sm w-fit"
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={!canEdit}
+            >
+              <Trash2 size={16} />
+              Delete Tournament
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <div className="alert alert-error">
+                <AlertTriangle size={20} />
+                <div>
+                  <p className="font-semibold">Are you absolutely sure?</p>
+                  <p className="text-sm">
+                    This will permanently delete the tournament and all associated data.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={isDeleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-error btn-sm"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? (
+                    <>
+                      <span className="loading loading-spinner loading-sm"></span>
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} />
+                      Yes, Delete Forever
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -20,8 +20,8 @@ export interface ScheduleConfig {
 
 export interface MatchToSchedule {
   gameId?: number; // Optional for already created matches
-  team1Id: number;
-  team2Id: number;
+  team1Id: number | null;
+  team2Id: number | null;
   roundNumber: number;
   gameNumber: number;
   bracketType: 'winners' | 'losers' | 'finals';
@@ -31,7 +31,7 @@ export interface MatchToSchedule {
 }
 
 export interface ScheduledMatch extends MatchToSchedule {
-  scheduledTime: Date;
+  scheduledTime: string; // ISO datetime string for database
   courtNumber: number;
   estimatedEndTime: Date;
 }
@@ -52,9 +52,11 @@ export class TimeScheduler {
   private config: ScheduleConfig;
   private daySchedules: DaySchedule[];
   private courtAvailability: Map<number, Date>; // court number -> next available time
+  private tournamentStartDate: Date;
 
   constructor(config: ScheduleConfig) {
     this.config = config;
+    this.tournamentStartDate = new Date(config.tournamentStartDate);
     this.daySchedules = this.generateDaySchedules();
     this.courtAvailability = new Map();
     
@@ -62,6 +64,15 @@ export class TimeScheduler {
     for (let i = 1; i <= config.numberOfCourts; i++) {
       this.courtAvailability.set(i, this.daySchedules[0].startTime);
     }
+
+    console.log(`TimeScheduler initialized:`, {
+      startDate: this.tournamentStartDate.toISOString(),
+      days: this.daySchedules.length,
+      courts: config.numberOfCourts,
+      dailyWindow: `${config.dailyStartTime} - ${config.dailyEndTime}`,
+      gameDuration: config.gameDurationMinutes,
+      breakDuration: config.breakDurationMinutes
+    });
   }
 
   /**
@@ -70,19 +81,21 @@ export class TimeScheduler {
    */
   private generateDaySchedules(): DaySchedule[] {
     const schedules: DaySchedule[] = [];
-    const startDate = new Date(this.config.tournamentStartDate);
 
     for (let day = 0; day < this.config.numberOfDays; day++) {
-      const currentDate = new Date(startDate);
-      currentDate.setDate(startDate.getDate() + day);
+      // Create date for this day
+      const currentDate = new Date(this.tournamentStartDate);
+      currentDate.setDate(currentDate.getDate() + day);
 
       // Parse daily start and end times
       const [startHour, startMinute] = this.config.dailyStartTime.split(':').map(Number);
       const [endHour, endMinute] = this.config.dailyEndTime.split(':').map(Number);
 
+      // Create start time for this day
       const dayStart = new Date(currentDate);
       dayStart.setHours(startHour, startMinute, 0, 0);
 
+      // Create end time for this day
       const dayEnd = new Date(currentDate);
       dayEnd.setHours(endHour, endMinute, 0, 0);
 
@@ -91,6 +104,12 @@ export class TimeScheduler {
         date: currentDate,
         startTime: dayStart,
         endTime: dayEnd,
+      });
+
+      console.log(`Day ${day + 1} schedule:`, {
+        date: currentDate.toDateString(),
+        start: dayStart.toISOString(),
+        end: dayEnd.toISOString()
       });
     }
 
@@ -111,10 +130,12 @@ export class TimeScheduler {
     const scheduledMatches: ScheduledMatch[] = [];
     const teamNextAvailable = new Map<number, Date>(); // Track when each team is next available
 
+    console.log(`\n🎯 Scheduling ${matches.length} matches...`);
+
     for (const match of matches) {
-      // Find earliest time both teams are available
-      const team1Available = teamNextAvailable.get(match.team1Id) || this.daySchedules[0].startTime;
-      const team2Available = teamNextAvailable.get(match.team2Id) || this.daySchedules[0].startTime;
+      // Handle matches with TBD teams (byes or pending)
+      const team1Available = (match.team1Id && teamNextAvailable.get(match.team1Id)) || this.daySchedules[0].startTime;
+      const team2Available = (match.team2Id && teamNextAvailable.get(match.team2Id)) || this.daySchedules[0].startTime;
       const earliestTeamTime = team1Available > team2Available ? team1Available : team2Available;
 
       // Find next available court slot that's after teams are available
@@ -137,18 +158,26 @@ export class TimeScheduler {
       // Schedule the match
       scheduledMatches.push({
         ...match,
-        scheduledTime: slot.scheduledTime,
+        scheduledTime: slot.scheduledTime.toISOString(), // Convert to ISO string for database
         courtNumber: slot.courtNumber,
         estimatedEndTime: matchEndTime,
       });
+
+      console.log(`  ✅ Match ${match.gameNumber}: Court ${slot.courtNumber} at ${slot.scheduledTime.toISOString()}`);
 
       // Update court availability (after game + break)
       this.courtAvailability.set(slot.courtNumber, matchEndTime);
 
       // Update team availability (teams can't play another match until this one ends + break)
-      teamNextAvailable.set(match.team1Id, matchEndTime);
-      teamNextAvailable.set(match.team2Id, matchEndTime);
+      if (match.team1Id) {
+        teamNextAvailable.set(match.team1Id, matchEndTime);
+      }
+      if (match.team2Id) {
+        teamNextAvailable.set(match.team2Id, matchEndTime);
+      }
     }
+
+    console.log(`✅ Successfully scheduled ${scheduledMatches.length} matches\n`);
 
     return scheduledMatches;
   }
@@ -262,6 +291,14 @@ export class TimeScheduler {
       };
     }
 
+    // Validate tournament start date is not in the past
+    if (this.tournamentStartDate < new Date()) {
+      return {
+        valid: false,
+        message: 'Tournament start date cannot be in the past.'
+      };
+    }
+
     return { valid: true };
   }
 
@@ -296,7 +333,7 @@ export class TimeScheduler {
       // Tournament fits within allocated days
       const lastDay = this.daySchedules[Math.min(daysNeeded - 1, this.daySchedules.length - 1)];
       const remainingMatches = numberOfMatches % matchesPerDay || matchesPerDay;
-      const minutesOnLastDay = remainingMatches * minutesPerMatch;
+      const minutesOnLastDay = Math.ceil(remainingMatches / this.config.numberOfCourts) * minutesPerMatch;
       
       estimatedEndTime = new Date(lastDay.startTime);
       estimatedEndTime.setMinutes(estimatedEndTime.getMinutes() + minutesOnLastDay);
@@ -304,6 +341,14 @@ export class TimeScheduler {
       // Tournament exceeds allocated days
       estimatedEndTime = this.daySchedules[this.daySchedules.length - 1].endTime;
     }
+
+    console.log(`📊 Tournament Duration Estimate:`, {
+      totalMatches: numberOfMatches,
+      matchesPerDay,
+      daysNeeded,
+      daysAllocated: this.config.numberOfDays,
+      estimatedEnd: estimatedEndTime.toISOString()
+    });
 
     return {
       estimatedEndTime,

@@ -7,6 +7,11 @@
  * This is the main entry point for tournament schedule generation
  * Handles all four tournament formats with unified interface
  * 
+ * Binary Tree Structure:
+ * - Each match has ONE parent_match_id (the match it came from)
+ * - Each match has ONE child_match_id (the match winner advances to)
+ * - Position is determined by ORDER of completion
+ * 
  * Time Complexity: O(n log n + m*c*d) where:
  *   n = number of teams
  *   m = number of matches
@@ -24,7 +29,7 @@ export interface ScheduleGenerationParams {
   numberOfCourts: number;
   gameDurationMinutes: number;
   breakDurationMinutes: number;
-  tournamentStartDateTime: string; // ISO datetime
+  tournamentStartDate: string;
   numberOfDays: number;
   dailyStartTime: string; // "HH:MM"
   dailyEndTime: string; // "HH:MM"
@@ -39,15 +44,25 @@ export interface ScheduleGenerationResult {
 }
 
 /**
+ * Convert ISO datetime string to MySQL datetime format
+ * '2025-11-11T07:00:00.000Z' -> '2025-11-11 07:00:00'
+ */
+function toMySQLDatetime(isoString: string): string {
+  const date = new Date(isoString);
+  
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+/**
  * Main function to generate complete tournament schedule
  * Time Complexity: O(n log n + m*c*d)
- * 
- * Steps:
- * 1. Fetch tournament and registered teams from database
- * 2. Validate configuration
- * 3. Generate bracket based on tournament format
- * 4. Schedule matches with time/court assignments
- * 5. Save to database
  */
 export async function generateTournamentSchedule(
   params: ScheduleGenerationParams
@@ -94,7 +109,7 @@ export async function generateTournamentSchedule(
       numberOfCourts: params.numberOfCourts,
       gameDurationMinutes: params.gameDurationMinutes,
       breakDurationMinutes: params.breakDurationMinutes,
-      tournamentStartDate: params.tournamentStartDateTime,
+      tournamentStartDate: params.tournamentStartDate,
       numberOfDays: params.numberOfDays,
       dailyStartTime: params.dailyStartTime,
       dailyEndTime: params.dailyEndTime,
@@ -132,7 +147,6 @@ export async function generateTournamentSchedule(
       
       case 'group_stage':
         const { generateGroupStageKnockout } = require('./brackets/groupStage');
-        // For group stage, organizer can specify advancing per group (default 2)
         bracketMatches = generateGroupStageKnockout(teams, 2);
         break;
       
@@ -159,7 +173,7 @@ export async function generateTournamentSchedule(
     
     console.log(`Scheduled ${scheduledMatches.length} matches`);
 
-    // Step 9: Save to database
+    // Step 9: Save to database with proper binary tree structure
     await saveScheduleToDatabase(params.tournamentId, scheduledMatches);
 
     return {
@@ -240,54 +254,130 @@ async function getRegisteredTeams(tournamentId: string): Promise<Team[]> {
 }
 
 /**
- * Save scheduled matches to database
+ * Save scheduled matches to database with binary tree structure
  * Time Complexity: O(m) where m = number of matches
  * 
- * Uses batch insert for efficiency
+ * Binary Tree Structure:
+ * - First pass: Insert all matches and get their IDs
+ * - Second pass: Update parent_match_id and child_match_id references using gameId mapping
  */
 async function saveScheduleToDatabase(
   tournamentId: string,
   matches: ScheduledMatch[]
 ): Promise<void> {
-  const insertQuery = `
-    INSERT INTO tournament_games (
-      tournament_id,
-      team1_id,
-      team2_id,
-      round_number,
-      game_number,
-      bracket_type,
-      scheduled_time,
-      court_number,
-      game_status,
-      parent_match_id,
-      child_match_id,
-      group_id,
-      created_at,
-      updated_at
-    ) VALUES ?
-  `;
-
-  const values = matches.map(match => [
-    tournamentId,
-    match.team1Id === -1 ? null : match.team1Id, // -1 represents BYE
-    match.team2Id === -1 ? null : match.team2Id,
-    match.roundNumber,
-    match.gameNumber,
-    match.bracketType,
-    match.scheduledTime,
-    match.courtNumber.toString(),
-    'scheduled',
-    match.parentMatchId || null,
-    match.childMatchId || null,
-    match.groupId || null,
-    new Date(),
-    new Date(),
-  ]);
-
-  await db.query(insertQuery, [values]);
+  console.log('\n=== SAVING SCHEDULE TO DATABASE ===\n');
   
-  console.log(`Saved ${matches.length} matches to database`);
+  // Map to store gameId (from bracket generator) to database game_id
+  const gameIdToDbId = new Map<number, number>();
+
+  // First pass: Insert all matches and build the mapping
+  console.log('📝 FIRST PASS: Inserting matches...\n');
+  
+  for (const match of matches) {
+    const team1Id = match.team1Id === null || match.team1Id === -1 ? null : match.team1Id;
+    const team2Id = match.team2Id === null || match.team2Id === -1 ? null : match.team2Id;
+    
+    const gameStatus = 'scheduled';
+    const scheduledTime = toMySQLDatetime(match.scheduledTime);
+
+    const insertQuery = `
+      INSERT INTO tournament_games (
+        tournament_id,
+        team1_id,
+        team2_id,
+        round_number,
+        game_number,
+        bracket_type,
+        scheduled_time,
+        court_number,
+        game_status,
+        group_id,
+        created_at,
+        updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+    `;
+
+    const values = [
+      tournamentId,
+      team1Id,
+      team2Id,
+      match.roundNumber,
+      match.gameNumber,
+      match.bracketType,
+      scheduledTime,
+      match.courtNumber?.toString(),
+      gameStatus,
+      match.groupId || null,
+    ];
+
+    const result = await db.query(insertQuery, values);
+    const dbGameId = result.insertId;
+    
+    // Map the bracket's gameId to database game_id
+    if (match.gameId) {
+      gameIdToDbId.set(match.gameId, dbGameId);
+      console.log(`✅ Inserted match: bracket gameId=${match.gameId} → DB game_id=${dbGameId}`);
+      console.log(`   Round ${match.roundNumber}, Game ${match.gameNumber}, Teams: ${team1Id} vs ${team2Id}`);
+    } else {
+      console.warn(`⚠️  Match has no gameId! Round ${match.roundNumber}, Game ${match.gameNumber}`);
+    }
+  }
+
+  console.log(`\n📊 Total matches inserted: ${matches.length}`);
+  console.log(`📊 GameId mappings created: ${gameIdToDbId.size}\n`);
+
+  // Second pass: Update parent and child relationships
+  console.log('🔗 SECOND PASS: Setting up parent-child relationships...\n');
+  
+  let relationshipsSet = 0;
+  
+  for (const match of matches) {
+    if (!match.gameId) continue;
+    
+    const dbGameId = gameIdToDbId.get(match.gameId);
+    if (!dbGameId) {
+      console.warn(`⚠️  No DB ID found for bracket gameId ${match.gameId}`);
+      continue;
+    }
+
+    let parentDbId = null;
+    let childDbId = null;
+
+    // Convert bracket parentMatchId to database parent_match_id
+    if (match.parentMatchId) {
+      parentDbId = gameIdToDbId.get(match.parentMatchId);
+      if (!parentDbId) {
+        console.warn(`⚠️  Parent bracket gameId ${match.parentMatchId} not found in DB mapping`);
+      }
+    }
+
+    // Convert bracket childMatchId to database child_match_id
+    if (match.childMatchId) {
+      childDbId = gameIdToDbId.get(match.childMatchId);
+      if (!childDbId) {
+        console.warn(`⚠️  Child bracket gameId ${match.childMatchId} not found in DB mapping`);
+      }
+    }
+
+    // Update the match with relationship IDs
+    if (parentDbId || childDbId) {
+      await db.query(
+        `UPDATE tournament_games 
+         SET parent_match_id = ?, child_match_id = ?, updated_at = NOW()
+         WHERE game_id = ?`,
+        [parentDbId, childDbId, dbGameId]
+      );
+      
+      relationshipsSet++;
+      console.log(`🔗 Match ${dbGameId}:`);
+      console.log(`   parent_match_id = ${parentDbId || 'NULL'}`);
+      console.log(`   child_match_id = ${childDbId || 'NULL'}`);
+    }
+  }
+  
+  console.log(`\n✅ Relationships set: ${relationshipsSet} matches updated`);
+  console.log(`✅ Saved ${matches.length} matches to database with binary tree structure\n`);
+  console.log('=== SCHEDULE SAVE COMPLETE ===\n');
 }
 
 /**

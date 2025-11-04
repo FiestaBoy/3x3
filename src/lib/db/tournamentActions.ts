@@ -382,3 +382,224 @@ export async function regenerateTournamentJoinCode(tournamentId: string) {
     return { success: false, message: "Failed to regenerate join code" };
   }
 }
+
+export async function updateTournamentSettings(
+  tournamentId: string,
+  data: Partial<TournamentFormFields>
+) {
+  try {
+    const session = await getUserSession();
+
+    // Verify user is the organizer
+    const organizerCheck = await db.query(
+      "SELECT organizer_id FROM tournaments WHERE tournament_id = ?",
+      [tournamentId]
+    );
+
+    if (!organizerCheck || organizerCheck.length === 0) {
+      return { success: false, message: "Tournament not found" };
+    }
+
+    if (String(organizerCheck[0].organizer_id) !== String(session.userId)) {
+      return {
+        success: false,
+        message: "Only organizers can update tournament settings",
+      };
+    }
+
+    // Check if tournament has started
+    const hasSchedule = await db.query(
+      "SELECT COUNT(*) as count FROM tournament_games WHERE tournament_id = ?",
+      [tournamentId]
+    );
+
+    if (hasSchedule[0].count > 0) {
+      return {
+        success: false,
+        message: "Cannot modify tournament settings after schedule is generated",
+      };
+    }
+
+    // Build update query dynamically
+    const updates: string[] = [];
+    const params: any[] = [];
+
+    if (data.name !== undefined) {
+      updates.push("name = ?");
+      params.push(data.name);
+    }
+
+    if (data.description !== undefined) {
+      updates.push("description = ?");
+      params.push(data.description);
+    }
+
+    if (data.startDate !== undefined) {
+      updates.push("start_date = ?");
+      params.push(data.startDate);
+    }
+
+    if (data.endDate !== undefined) {
+      updates.push("end_date = ?");
+      params.push(data.endDate);
+    }
+
+    if (data.registrationStart !== undefined) {
+      updates.push("registration_start = ?");
+      params.push(data.registrationStart);
+    }
+
+    if (data.registrationEnd !== undefined) {
+      updates.push("registration_end = ?");
+      params.push(data.registrationEnd);
+    }
+
+    if (data.location !== undefined) {
+      updates.push("location = ?");
+      params.push(data.location);
+    }
+
+    if (data.address !== undefined) {
+      updates.push("address = ?");
+      params.push(data.address);
+    }
+
+    if (data.venueDetails !== undefined) {
+      updates.push("venue_details = ?");
+      params.push(data.venueDetails);
+    }
+
+    if (data.ageGroup !== undefined) {
+      updates.push("age_group = ?");
+      params.push(data.ageGroup);
+    }
+
+    if (data.maxTeams !== undefined) {
+      // Check if reducing max teams below current registrations
+      const currentTeams = await db.query(
+        "SELECT COUNT(*) as count FROM team_tournament WHERE tournament_id = ?",
+        [tournamentId]
+      );
+
+      if (data.maxTeams < currentTeams[0].count) {
+        return {
+          success: false,
+          message: `Cannot reduce max teams below current registrations (${currentTeams[0].count})`,
+        };
+      }
+
+      updates.push("max_teams = ?");
+      params.push(data.maxTeams);
+    }
+
+    if (data.format !== undefined) {
+      updates.push("format = ?");
+      params.push(data.format);
+    }
+
+    if (data.gameDuration !== undefined) {
+      updates.push("game_duration = ?");
+      params.push(data.gameDuration);
+    }
+
+    if (data.contactEmail !== undefined) {
+      updates.push("contact_email = ?");
+      params.push(data.contactEmail);
+    }
+
+    if (data.contactPhone !== undefined) {
+      updates.push("contact_phone = ?");
+      params.push(data.contactPhone);
+    }
+
+    if (data.isPrivate !== undefined) {
+      updates.push("is_private = ?");
+      params.push(data.isPrivate);
+
+      // If changing to private and no join code exists, generate one
+      if (data.isPrivate && !organizerCheck[0].join_code) {
+        const newCode = await generateJoinCode();
+        updates.push("join_code = ?");
+        params.push(newCode);
+      }
+    }
+
+    if (updates.length === 0) {
+      return { success: false, message: "No changes to update" };
+    }
+
+    // Add tournament_id to params
+    params.push(tournamentId);
+
+    const query = `UPDATE tournaments SET ${updates.join(", ")} WHERE tournament_id = ?`;
+
+    await db.query(query, params);
+
+    revalidatePath("/tournaments");
+
+    return {
+      success: true,
+      message: "Tournament settings updated successfully",
+    };
+  } catch (error) {
+    console.error("Error updating tournament settings:", error);
+    return { success: false, message: "Failed to update tournament settings" };
+  }
+}
+
+export async function deleteTournament(tournamentId: string) {
+  try {
+    const session = await getUserSession();
+
+    // Verify user is the organizer
+    const organizerCheck = await db.query(
+      "SELECT organizer_id FROM tournaments WHERE tournament_id = ?",
+      [tournamentId]
+    );
+
+    if (!organizerCheck || organizerCheck.length === 0) {
+      return { success: false, message: "Tournament not found" };
+    }
+
+    if (String(organizerCheck[0].organizer_id) !== String(session.userId)) {
+      return {
+        success: false,
+        message: "Only organizers can delete tournaments",
+      };
+    }
+
+    // Check if tournament has started
+    const hasSchedule = await db.query(
+      "SELECT COUNT(*) as count FROM tournament_games WHERE tournament_id = ? AND game_status != 'pending'",
+      [tournamentId]
+    );
+
+    if (hasSchedule[0].count > 0) {
+      return {
+        success: false,
+        message: "Cannot delete tournament after matches have started",
+      };
+    }
+
+    // Delete related records (cascading delete)
+    await db.query("DELETE FROM tournament_games WHERE tournament_id = ?", [
+      tournamentId,
+    ]);
+    await db.query("DELETE FROM team_tournament WHERE tournament_id = ?", [
+      tournamentId,
+    ]);
+    await db.query("DELETE FROM tournaments WHERE tournament_id = ?", [
+      tournamentId,
+    ]);
+
+    revalidatePath("/tournaments");
+
+    return {
+      success: true,
+      message: "Tournament deleted successfully",
+    };
+  } catch (error) {
+    console.error("Error deleting tournament:", error);
+    return { success: false, message: "Failed to delete tournament" };
+  }
+}

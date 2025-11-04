@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Trophy, Clock, Flag, AlertCircle, CheckCircle } from "lucide-react";
+import { Trophy, Clock, Flag, AlertCircle, CheckCircle, HelpCircle } from "lucide-react";
 import { enterMatchResult, forfeitMatch } from "@/src/lib/db/progression/matchProgression";
 
 interface MatchManagementProps {
@@ -14,13 +14,27 @@ export default function MatchManagement({ matches, onUpdate }: MatchManagementPr
   const [team1Score, setTeam1Score] = useState("");
   const [team2Score, setTeam2Score] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPending, setShowPending] = useState(true);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
 
+  // Separate matches by status
+  const playableMatches = matches.filter(m => m.team1_id && m.team2_id);
+  const pendingMatches = matches.filter(m => !m.team1_id || !m.team2_id);
+
   // Group matches by round
-  const matchesByRound = matches.reduce((acc: any, match: any) => {
+  const matchesByRound = playableMatches.reduce((acc: any, match: any) => {
+    const round = match.round_number;
+    if (!acc[round]) {
+      acc[round] = [];
+    }
+    acc[round].push(match);
+    return acc;
+  }, {});
+
+  const pendingByRound = pendingMatches.reduce((acc: any, match: any) => {
     const round = match.round_number;
     if (!acc[round]) {
       acc[round] = [];
@@ -30,6 +44,10 @@ export default function MatchManagement({ matches, onUpdate }: MatchManagementPr
   }, {});
 
   const sortedRounds = Object.keys(matchesByRound)
+    .map(Number)
+    .sort((a, b) => a - b);
+
+  const sortedPendingRounds = Object.keys(pendingByRound)
     .map(Number)
     .sort((a, b) => a - b);
 
@@ -162,8 +180,9 @@ export default function MatchManagement({ matches, onUpdate }: MatchManagementPr
     if (match.game_status === "in_progress") {
       return <span className="badge badge-warning badge-sm">In Progress</span>;
     }
+    // Check if teams are assigned
     if (!match.team1_id || !match.team2_id) {
-      return <span className="badge badge-ghost badge-sm">TBD</span>;
+      return <span className="badge badge-ghost badge-sm">Waiting for Teams</span>;
     }
     return <span className="badge badge-primary badge-sm">Scheduled</span>;
   };
@@ -175,6 +194,7 @@ export default function MatchManagement({ matches, onUpdate }: MatchManagementPr
       match.team2_id
     );
   };
+
 
   if (matches.length === 0) {
     return (
@@ -207,6 +227,7 @@ export default function MatchManagement({ matches, onUpdate }: MatchManagementPr
           </div>
         )}
 
+        {/* Playable Matches */}
         {sortedRounds.map((round) => (
           <div key={round} className="space-y-3">
             <h4 className="font-semibold text-lg flex items-center gap-2">
@@ -304,6 +325,90 @@ export default function MatchManagement({ matches, onUpdate }: MatchManagementPr
             </div>
           </div>
         ))}
+
+        {/* Pending Matches Section */}
+        {pendingMatches.length > 0 && (
+          <div className="space-y-3">
+            <button
+              className="btn btn-sm btn-ghost w-full justify-between"
+              onClick={() => setShowPending(!showPending)}
+            >
+              <span className="font-semibold flex items-center gap-2">
+                <HelpCircle size={18} />
+                Upcoming Matches ({pendingMatches.length})
+              </span>
+              <span className="text-xs">
+                {showPending ? "Hide" : "Show"}
+              </span>
+            </button>
+
+            {showPending && (
+              <div className="alert alert-info">
+                <AlertCircle size={20} />
+                <div className="text-sm">
+                  <p className="font-semibold">These matches are waiting for teams to be determined</p>
+                  <p className="text-xs opacity-80">Winners from previous rounds will automatically advance here</p>
+                </div>
+              </div>
+            )}
+
+            {showPending && sortedPendingRounds.map((round) => (
+              <div key={`pending-${round}`} className="space-y-2">
+                <h5 className="font-medium text-sm text-base-content/70 flex items-center gap-2">
+                  Round {round} - Pending
+                </h5>
+
+                <div className="space-y-2">
+                  {pendingByRound[round].map((match: any) => (
+                    <div
+                      key={match.game_id}
+                      className="card bg-base-300 opacity-60"
+                    >
+                      <div className="card-body p-4">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="text-sm text-base-content/70">
+                            Match {match.game_number}
+                          </div>
+                          {getMatchStatusBadge(match)}
+                        </div>
+
+                        <div className="space-y-2 text-base-content/60">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <HelpCircle size={14} />
+                              <span className="text-sm">
+                                {match.team1_name || "Winner of previous match"}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="text-center text-xs">VS</div>
+
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <HelpCircle size={14} />
+                              <span className="text-sm">
+                                {match.team2_name || "Winner of previous match"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-4 mt-3 text-xs text-base-content/50">
+                          <div className="flex items-center gap-1">
+                            <Clock size={14} />
+                            {formatDateTime(match.scheduled_time)}
+                          </div>
+                          <div>Court {match.court_number}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Score Entry Form */}

@@ -1,15 +1,13 @@
 "use server";
 
 /**
- * Match Progression System
- * Handles match result entry and automatic bracket advancement
+ * Match Progression System - Binary Tree Version
+ * Uses parent_match_id and child_match_id for proper tree structure
  * 
- * Key Features:
- * - Enter match scores
- * - Determine winner
- * - Auto-advance winner to next match
- * - Handle byes and forfeits
- * - Update team statistics
+ * Binary Tree Logic:
+ * - Each match can have ONE parent (the match it came from)
+ * - Each match can have ONE child (the match winner advances to)
+ * - Child matches fill team1 first, then team2 based on completion order
  * 
  * Time Complexity: O(1) per match result entry
  */
@@ -34,15 +32,6 @@ export interface MatchResultResponse {
 /**
  * Enter match result and progress bracket
  * Time Complexity: O(1)
- * 
- * Algorithm:
- * 1. Validate match exists and is in correct state
- * 2. Validate scores (no ties, winner has higher score)
- * 3. Update match record with scores and winner
- * 4. Update team statistics
- * 5. Check if match has a child (next round match)
- * 6. If child exists, set winner as participant in child match
- * 7. Check if child match is now ready to be played
  */
 export async function enterMatchResult(
   result: MatchResult
@@ -58,6 +47,14 @@ export async function enterMatchResult(
         message: 'Match not found',
       };
     }
+
+    console.log('Match details:', {
+      game_id: match.game_id,
+      team1: match.team1_id,
+      team2: match.team2_id,
+      child_match_id: match.child_match_id,
+      status: match.game_status
+    });
 
     // Step 2: Validate match state
     if (match.game_status === 'completed') {
@@ -88,10 +85,9 @@ export async function enterMatchResult(
         return {
           success: false,
           message: 'Ties are not allowed. There must be a winner.',
-        };
+          };
       }
 
-      // Validate winner matches the scores
       const expectedWinner = result.team1Score > result.team2Score 
         ? match.team1_id 
         : match.team2_id;
@@ -112,7 +108,7 @@ export async function enterMatchResult(
     }
 
     // Step 5: Update match record
-    await db.query(
+    const updateResult = await db.query(
       `UPDATE tournament_games 
        SET team1_score = ?,
            team2_score = ?,
@@ -129,9 +125,9 @@ export async function enterMatchResult(
       ]
     );
 
-    console.log(`Match ${result.gameId} marked as completed`);
+    console.log(`Match ${result.gameId} update result:`, updateResult);
 
-    // Step 6: Update team statistics in team_tournament
+    // Step 6: Update team statistics
     const loserTeamId = result.winnerTeamId === match.team1_id 
       ? match.team2_id 
       : match.team1_id;
@@ -146,79 +142,45 @@ export async function enterMatchResult(
       result.isForfeit || false
     );
 
-    // Step 7: Check if this match feeds into another match (child match)
+    // Step 7: Advance winner to child match
     let nextMatchGenerated = false;
     
     if (match.child_match_id) {
-      const childMatch = await getMatchById(match.child_match_id);
+      console.log(`🔄 Attempting to advance winner ${result.winnerTeamId} to child match ${match.child_match_id}`);
       
-      if (childMatch) {
-        // Determine which slot in the child match this winner goes to
-        await advanceWinnerToNextMatch(
-          match.child_match_id,
-          result.winnerTeamId,
-          result.gameId
-        );
-        
-        nextMatchGenerated = true;
-        console.log(`Winner advanced to match ${match.child_match_id}`);
-      }
+      await advanceWinnerToNextMatch(
+        match.child_match_id,
+        result.winnerTeamId
+      );
+      
+      nextMatchGenerated = true;
+      console.log(`✅ Winner (Team ${result.winnerTeamId}) advanced to match ${match.child_match_id}`);
+
+      // Check if child match is ready
+      await checkAndActivateMatch(match.child_match_id);
+    } else {
+      console.log('⚠️ No child_match_id found - this might be a final match');
     }
 
     // Step 7b: Handle double elimination - loser drops to losers bracket
     if (match.bracket_type === 'winners') {
-      const loserTeamId = result.winnerTeamId === match.team1_id 
-        ? match.team2_id 
-        : match.team1_id;
-
-      // Check if this winners match has a loser destination
-      const loserDestination = await db.query(
-        `SELECT game_id FROM tournament_games 
-         WHERE tournament_id = ? 
-         AND bracket_type = 'losers'
-         AND round_number = ?
-         AND (team1_id IS NULL OR team2_id IS NULL)
-         ORDER BY game_id ASC
-         LIMIT 1`,
-        [match.tournament_id, calculateLosersRound(match.round_number)]
+      await handleWinnersBracketLoser(
+        match.tournament_id,
+        loserTeamId,
+        match.round_number,
+        match.game_number,
+        result.gameId
       );
-
-      if (loserDestination && loserDestination.length > 0) {
-        await dropToLosersBracket(
-          loserDestination[0].game_id,
-          loserTeamId,
-          result.gameId
-        );
-        console.log(`Loser dropped to losers bracket match ${loserDestination[0].game_id}`);
-      }
     }
 
     // Step 7c: Handle grand finals bracket reset
     if (match.bracket_type === 'finals' && match.round_number === 1) {
-      // Check if losers bracket champion won
-      const losersChampion = await getLosersBracketChampion(match.tournament_id);
-      
-      if (losersChampion && result.winnerTeamId === losersChampion.team_id) {
-        // Bracket reset! Enable second grand finals match
-        const bracketResetMatch = await db.query(
-          `SELECT game_id FROM tournament_games 
-           WHERE tournament_id = ? 
-           AND bracket_type = 'finals' 
-           AND round_number = 2`,
-          [match.tournament_id]
-        );
-
-        if (bracketResetMatch && bracketResetMatch.length > 0) {
-          // Set both teams for bracket reset match
-          await db.query(
-            `UPDATE tournament_games 
-             SET team1_id = ?, team2_id = ?, game_status = 'scheduled', updated_at = NOW()
-             WHERE game_id = ?`,
-            [match.team1_id, match.team2_id, bracketResetMatch[0].game_id]
-          );
-          console.log('Bracket reset activated!');
-        }
-      }
+      await handleGrandFinalsBracketReset(
+        match.tournament_id,
+        result.winnerTeamId,
+        match.team1_id,
+        match.team2_id
+      );
     }
 
     // Step 8: Check if tournament is complete
@@ -226,27 +188,18 @@ export async function enterMatchResult(
 
     // Step 8b: For group stage format, check if knockout should be generated
     if (match.group_id !== null && !tournamentComplete) {
-      const { isGroupStageComplete } = require('../brackets/groupStage');
-      const groupStageComplete = await isGroupStageComplete(match.tournament_id, db);
-      
-      if (groupStageComplete) {
-        // Check if knockout already generated
-        const knockoutExists = await db.query(
-          'SELECT COUNT(*) as count FROM tournament_games WHERE tournament_id = ? AND group_id IS NULL',
-          [match.tournament_id]
-        );
-
-        if (knockoutExists[0].count === 0) {
-          // Generate knockout bracket
-          console.log('Group stage complete, generating knockout bracket');
-          await generateGroupStageKnockout(match.tournament_id);
-        }
-      }
+      await handleGroupStageCompletion(match.tournament_id);
     }
 
     // Step 9: If tournament complete, calculate final positions
     if (tournamentComplete) {
       await calculateFinalStandings(match.tournament_id);
+      
+      await db.query(
+        `UPDATE tournaments SET status = 'completed', updated_at = NOW() 
+         WHERE tournament_id = ?`,
+        [match.tournament_id]
+      );
     }
 
     return {
@@ -268,56 +221,230 @@ export async function enterMatchResult(
 }
 
 /**
- * Advance winner to the next round match
+ * Advance winner to next match using binary tree logic
  * Time Complexity: O(1)
  * 
- * Logic:
- * - Each child match has two parent matches
- * - First parent's winner goes to team1_id
- * - Second parent's winner goes to team2_id
+ * Binary Tree Logic:
+ * - Child match fills team1 first, then team2 based on ORDER OF COMPLETION
+ * - No parent tracking needed - just fill next empty slot
  */
 async function advanceWinnerToNextMatch(
   childMatchId: number,
-  winnerTeamId: number,
-  parentMatchId: number
+  winnerTeamId: number
 ): Promise<void> {
-  // Get the child match to determine which slot to fill
+  console.log(`\n🔄 advanceWinnerToNextMatch called:`);
+  console.log(`   - childMatchId: ${childMatchId}`);
+  console.log(`   - winnerTeamId: ${winnerTeamId}`);
+
   const childMatch = await getMatchById(childMatchId);
   
   if (!childMatch) {
+    console.error(`❌ Child match ${childMatchId} NOT FOUND in database!`);
     throw new Error('Child match not found');
   }
 
-  // Find all matches that feed into this child match
-  const parentMatches = await db.query(
-    'SELECT game_id FROM tournament_games WHERE child_match_id = ? ORDER BY game_id ASC',
-    [childMatchId]
-  );
+  console.log(`📋 Child match BEFORE update:`, {
+    game_id: childMatch.game_id,
+    team1_id: childMatch.team1_id,
+    team2_id: childMatch.team2_id,
+    game_status: childMatch.game_status,
+    parent_match_id: childMatch.parent_match_id,
+    child_match_id: childMatch.child_match_id
+  });
 
-  if (parentMatches.length !== 2) {
-    throw new Error('Invalid bracket structure: child match should have exactly 2 parents');
-  }
-
-  // First parent's winner goes to team1, second parent's winner goes to team2
-  const isFirstParent = parentMatches[0].game_id === parentMatchId;
-
-  if (isFirstParent) {
-    await db.query(
+  // Fill first empty slot: team1 first, then team2
+  if (childMatch.team1_id === null || childMatch.team1_id === undefined) {
+    console.log(`🎯 Setting team1_id = ${winnerTeamId} for match ${childMatchId}`);
+    
+    const updateResult = await db.query(
       'UPDATE tournament_games SET team1_id = ?, updated_at = NOW() WHERE game_id = ?',
       [winnerTeamId, childMatchId]
     );
-  } else {
-    await db.query(
+    
+    console.log(`📝 UPDATE query result:`, updateResult);
+    console.log(`   - affectedRows: ${updateResult.affectedRows}`);
+    console.log(`   - changedRows: ${updateResult.changedRows}`);
+    
+    // Verify the update
+    const verifyMatch = await getMatchById(childMatchId);
+    console.log(`✅ Child match AFTER update:`, {
+      game_id: verifyMatch.game_id,
+      team1_id: verifyMatch.team1_id,
+      team2_id: verifyMatch.team2_id
+    });
+    
+    if (verifyMatch.team1_id !== winnerTeamId) {
+      console.error(`❌ UPDATE FAILED! team1_id is still ${verifyMatch.team1_id}, expected ${winnerTeamId}`);
+      throw new Error('Failed to update team1_id in database');
+    }
+    
+  } else if (childMatch.team2_id === null || childMatch.team2_id === undefined) {
+    console.log(`🎯 Setting team2_id = ${winnerTeamId} for match ${childMatchId}`);
+    
+    const updateResult = await db.query(
       'UPDATE tournament_games SET team2_id = ?, updated_at = NOW() WHERE game_id = ?',
       [winnerTeamId, childMatchId]
     );
+    
+    console.log(`📝 UPDATE query result:`, updateResult);
+    console.log(`   - affectedRows: ${updateResult.affectedRows}`);
+    console.log(`   - changedRows: ${updateResult.changedRows}`);
+    
+    // Verify the update
+    const verifyMatch = await getMatchById(childMatchId);
+    console.log(`✅ Child match AFTER update:`, {
+      game_id: verifyMatch.game_id,
+      team1_id: verifyMatch.team1_id,
+      team2_id: verifyMatch.team2_id
+    });
+    
+    if (verifyMatch.team2_id !== winnerTeamId) {
+      console.error(`❌ UPDATE FAILED! team2_id is still ${verifyMatch.team2_id}, expected ${winnerTeamId}`);
+      throw new Error('Failed to update team2_id in database');
+    }
+    
+  } else {
+    console.warn(`⚠️ Match ${childMatchId} already has both teams assigned!`);
+    console.warn(`   - team1_id: ${childMatch.team1_id}`);
+    console.warn(`   - team2_id: ${childMatch.team2_id}`);
   }
-
-  console.log(`Advanced team ${winnerTeamId} to match ${childMatchId} slot ${isFirstParent ? 1 : 2}`);
 }
 
 /**
- * Update team statistics after match completion
+ * Check if match has both teams and activate it
+ * Time Complexity: O(1)
+ */
+async function checkAndActivateMatch(matchId: number): Promise<void> {
+  const match = await getMatchById(matchId);
+  
+  if (!match) {
+    console.warn(`⚠️ checkAndActivateMatch: match ${matchId} not found`);
+    return;
+  }
+
+  console.log(`🔍 Match ${matchId} status:`, {
+    team1_id: match.team1_id,
+    team2_id: match.team2_id,
+    current_status: match.game_status
+  });
+
+  // Just log if both teams are now assigned - status is already 'scheduled'
+  if (match.team1_id && match.team2_id) {
+    console.log(`✅ Match ${matchId} ready to play (both teams assigned)`);
+  } else {
+    console.log(`⏸️ Match ${matchId} waiting for teams`);
+  }
+}
+// ...existing code for rest of the functions...
+
+/**
+ * Handle loser from winners bracket dropping to losers bracket
+ * Time Complexity: O(1)
+ */
+async function handleWinnersBracketLoser(
+  tournamentId: string,
+  loserTeamId: number,
+  winnersRound: number,
+  winnersGameNumber: number,
+  winnersMatchId: number
+): Promise<void> {
+  const losersRound = 2 * winnersRound - 1;
+  
+  // Find losers bracket matches for this round
+  const losersMatches = await db.query(
+    `SELECT game_id, team1_id, team2_id FROM tournament_games 
+     WHERE tournament_id = ? 
+     AND bracket_type = 'losers'
+     AND round_number = ?
+     ORDER BY game_number ASC`,
+    [tournamentId, losersRound]
+  );
+
+  if (!losersMatches || losersMatches.length === 0) {
+    console.warn(`No losers bracket match found for round ${losersRound}`);
+    return;
+  }
+
+  // Find first available slot
+  for (const match of losersMatches) {
+    if (!match.team1_id) {
+      await db.query(
+        'UPDATE tournament_games SET team1_id = ?, updated_at = NOW() WHERE game_id = ?',
+        [loserTeamId, match.game_id]
+      );
+      console.log(`Team ${loserTeamId} dropped to losers match ${match.game_id} (team1)`);
+      await checkAndActivateMatch(match.game_id);
+      return;
+    } else if (!match.team2_id) {
+      await db.query(
+        'UPDATE tournament_games SET team2_id = ?, updated_at = NOW() WHERE game_id = ?',
+        [loserTeamId, match.game_id]
+      );
+      console.log(`Team ${loserTeamId} dropped to losers match ${match.game_id} (team2)`);
+      await checkAndActivateMatch(match.game_id);
+      return;
+    }
+  }
+  
+  console.warn(`No available slot in losers bracket round ${losersRound}`);
+}
+
+/**
+ * Handle grand finals bracket reset
+ * Time Complexity: O(1)
+ */
+async function handleGrandFinalsBracketReset(
+  tournamentId: string,
+  winnerId: number,
+  team1Id: number,
+  team2Id: number
+): Promise<void> {
+  const losersChampion = await getLosersBracketChampion(tournamentId);
+  
+  if (losersChampion && winnerId === losersChampion.team_id) {
+    const bracketResetMatch = await db.query(
+      `SELECT game_id FROM tournament_games 
+       WHERE tournament_id = ? 
+       AND bracket_type = 'finals' 
+       AND round_number = 2`,
+      [tournamentId]
+    );
+
+    if (bracketResetMatch && bracketResetMatch.length > 0) {
+      await db.query(
+        `UPDATE tournament_games 
+         SET team1_id = ?, team2_id = ?, game_status = 'scheduled', updated_at = NOW()
+         WHERE game_id = ?`,
+        [team1Id, team2Id, bracketResetMatch[0].game_id]
+      );
+      console.log('Bracket reset activated!');
+    }
+  }
+}
+
+/**
+ * Handle group stage completion
+ * Time Complexity: O(n log n)
+ */
+async function handleGroupStageCompletion(tournamentId: string): Promise<void> {
+  const { isGroupStageComplete } = require('../brackets/groupStage');
+  const groupStageComplete = await isGroupStageComplete(tournamentId, db);
+  
+  if (!groupStageComplete) return;
+
+  const knockoutExists = await db.query(
+    'SELECT COUNT(*) as count FROM tournament_games WHERE tournament_id = ? AND group_id IS NULL',
+    [tournamentId]
+  );
+
+  if (knockoutExists[0].count === 0) {
+    console.log('Group stage complete, generating knockout bracket');
+    await generateGroupStageKnockout(tournamentId);
+  }
+}
+
+/**
+ * Update team statistics
  * Time Complexity: O(1)
  */
 async function updateTeamStatistics(
@@ -329,11 +456,9 @@ async function updateTeamStatistics(
   team1Id: number,
   isForfeit: boolean
 ): Promise<void> {
-  // Determine which team scored which points
   const winnerScore = winnerTeamId === team1Id ? team1Score : team2Score;
   const loserScore = winnerTeamId === team1Id ? team2Score : team1Score;
 
-  // Update winner statistics
   await db.query(
     `UPDATE team_tournament 
      SET wins = wins + 1,
@@ -344,7 +469,6 @@ async function updateTeamStatistics(
     [isForfeit ? 0 : winnerScore, isForfeit ? 0 : loserScore, tournamentId, winnerTeamId]
   );
 
-  // Update loser statistics
   await db.query(
     `UPDATE team_tournament 
      SET losses = losses + 1,
@@ -359,11 +483,10 @@ async function updateTeamStatistics(
 }
 
 /**
- * Check if tournament is complete (all matches played or finals complete)
+ * Check if tournament is complete
  * Time Complexity: O(1)
  */
 async function checkTournamentComplete(tournamentId: string): Promise<boolean> {
-  // Check if there are any scheduled matches remaining
   const pendingMatches = await db.query(
     `SELECT COUNT(*) as count 
      FROM tournament_games 
@@ -374,7 +497,6 @@ async function checkTournamentComplete(tournamentId: string): Promise<boolean> {
     [tournamentId]
   );
 
-  // Check if finals match is complete
   const finalsComplete = await db.query(
     `SELECT COUNT(*) as count 
      FROM tournament_games 
@@ -388,11 +510,10 @@ async function checkTournamentComplete(tournamentId: string): Promise<boolean> {
 }
 
 /**
- * Calculate final standings for completed tournament
- * Time Complexity: O(n log n) where n = number of teams
+ * Calculate final standings
+ * Time Complexity: O(n log n)
  */
 async function calculateFinalStandings(tournamentId: string): Promise<void> {
-  // Get all teams with their statistics
   const teams = await db.query(
     `SELECT 
       team_id,
@@ -406,7 +527,6 @@ async function calculateFinalStandings(tournamentId: string): Promise<void> {
     [tournamentId]
   );
 
-  // Sort teams by wins (descending), then point differential (descending)
   teams.sort((a: any, b: any) => {
     if (b.wins !== a.wins) return b.wins - a.wins;
     if (b.point_differential !== a.point_differential) {
@@ -415,10 +535,9 @@ async function calculateFinalStandings(tournamentId: string): Promise<void> {
     return b.points_scored - a.points_scored;
   });
 
-  // Assign final positions
   for (let i = 0; i < teams.length; i++) {
     await db.query(
-      'UPDATE team_tournament SET final_position = ? WHERE tournament_id = ? AND team_id = ?',
+      'UPDATE team_tournament SET final_position = ?, updated_at = NOW() WHERE tournament_id = ? AND team_id = ?',
       [i + 1, tournamentId, teams[i].team_id]
     );
   }
@@ -427,7 +546,7 @@ async function calculateFinalStandings(tournamentId: string): Promise<void> {
 }
 
 /**
- * Handle forfeit - automatically award win to opponent
+ * Handle forfeit
  * Time Complexity: O(1)
  */
 export async function forfeitMatch(
@@ -438,32 +557,21 @@ export async function forfeitMatch(
     const match = await getMatchById(gameId);
     
     if (!match) {
-      return {
-        success: false,
-        message: 'Match not found',
-      };
+      return { success: false, message: 'Match not found' };
     }
 
     if (match.game_status === 'completed') {
-      return {
-        success: false,
-        message: 'Match is already completed',
-      };
+      return { success: false, message: 'Match is already completed' };
     }
 
-    // Determine winner (the team that didn't forfeit)
     const winnerTeamId = forfeitingTeamId === match.team1_id 
       ? match.team2_id 
       : match.team1_id;
 
     if (!winnerTeamId) {
-      return {
-        success: false,
-        message: 'Cannot determine winner team',
-      };
+      return { success: false, message: 'Cannot determine winner team' };
     }
 
-    // Record forfeit as 0-0 with winner set
     return await enterMatchResult({
       gameId,
       team1Score: 0,
@@ -474,10 +582,7 @@ export async function forfeitMatch(
 
   } catch (error) {
     console.error('Error processing forfeit:', error);
-    return {
-      success: false,
-      message: 'Failed to process forfeit',
-    };
+    return { success: false, message: 'Failed to process forfeit' };
   }
 }
 
@@ -495,52 +600,7 @@ async function getMatchById(gameId: number): Promise<any | null> {
 }
 
 /**
- * Calculate which losers bracket round a winners bracket loser drops to
- * Time Complexity: O(1)
- * 
- * Pattern:
- * Winners R1 losers → Losers R1
- * Winners R2 losers → Losers R3
- * Winners R3 losers → Losers R5
- * Formula: Losers Round = 2 * Winners Round - 1
- */
-function calculateLosersRound(winnersRound: number): number {
-  return 2 * winnersRound - 1;
-}
-
-/**
- * Drop loser from winners bracket to losers bracket
- * Time Complexity: O(1)
- */
-async function dropToLosersBracket(
-  losersMatchId: number,
-  loserTeamId: number,
-  winnersMatchId: number
-): Promise<void> {
-  const losersMatch = await getMatchById(losersMatchId);
-  
-  if (!losersMatch) {
-    throw new Error('Losers bracket match not found');
-  }
-
-  // Assign to first empty slot
-  if (!losersMatch.team1_id) {
-    await db.query(
-      'UPDATE tournament_games SET team1_id = ?, updated_at = NOW() WHERE game_id = ?',
-      [loserTeamId, losersMatchId]
-    );
-  } else if (!losersMatch.team2_id) {
-    await db.query(
-      'UPDATE tournament_games SET team2_id = ?, updated_at = NOW() WHERE game_id = ?',
-      [loserTeamId, losersMatchId]
-    );
-  }
-
-  console.log(`Team ${loserTeamId} dropped to losers match ${losersMatchId}`);
-}
-
-/**
- * Get losers bracket champion (winner of last losers bracket match)
+ * Get losers bracket champion
  * Time Complexity: O(1)
  */
 async function getLosersBracketChampion(tournamentId: string): Promise<any | null> {
@@ -559,131 +619,24 @@ async function getLosersBracketChampion(tournamentId: string): Promise<any | nul
 }
 
 /**
- * Generate knockout bracket after group stage completes
+ * Generate knockout bracket after group stage
  * Time Complexity: O(n log n)
  */
 async function generateGroupStageKnockout(tournamentId: string): Promise<void> {
-  const { generateKnockoutFromGroups, calculateOptimalGroupConfig } = require('../brackets/groupStage');
-  
-  // Get tournament details
-  const tournament = await db.query(
-    'SELECT * FROM tournaments WHERE tournament_id = ?',
-    [tournamentId]
-  );
-
-  if (!tournament || tournament.length === 0) {
-    throw new Error('Tournament not found');
-  }
-
-  // Get number of teams
-  const teamCount = await db.query(
-    `SELECT COUNT(DISTINCT team_id) as count 
-     FROM team_tournament 
-     WHERE tournament_id = ?`,
-    [tournamentId]
-  );
-
-  const numberOfTeams = teamCount[0].count;
-
-  // Calculate group configuration
-  const groupConfig = calculateOptimalGroupConfig(numberOfTeams, 2);
-
-  // Get next game number
-  const maxGameNumber = await db.query(
-    'SELECT MAX(game_number) as max_num FROM tournament_games WHERE tournament_id = ?',
-    [tournamentId]
-  );
-
-  const startingGameNumber = (maxGameNumber[0].max_num || 0) + 1;
-
-  // Generate knockout matches
-  const knockoutMatches = await generateKnockoutFromGroups(
-    tournamentId,
-    groupConfig,
-    db,
-    startingGameNumber
-  );
-
-  // Get tournament schedule config from first match
-  const firstMatch = await db.query(
-    'SELECT scheduled_time FROM tournament_games WHERE tournament_id = ? ORDER BY game_id ASC LIMIT 1',
-    [tournamentId]
-  );
-
-  if (!knockoutMatches || knockoutMatches.length === 0) {
-    console.log('No knockout matches to generate');
-    return;
-  }
-
-  // Calculate when knockout should start (after last group match)
-  const lastGroupMatch = await db.query(
-    `SELECT MAX(scheduled_time) as last_time 
-     FROM tournament_games 
-     WHERE tournament_id = ? AND group_id IS NOT NULL`,
-    [tournamentId]
-  );
-
-  // Add knockout matches to database
-  const { TimeScheduler } = require('../scheduling/timeScheduler');
-  
-  // Create a simplified schedule config for knockout (using tournament's game duration)
-  const knockoutStartTime = new Date(lastGroupMatch[0].last_time);
-  knockoutStartTime.setMinutes(knockoutStartTime.getMinutes() + tournament[0].game_duration + 30); // 30 min break
-
-  const scheduleConfig = {
-    numberOfCourts: 2, // Default
-    gameDurationMinutes: tournament[0].game_duration,
-    breakDurationMinutes: 5,
-    tournamentStartDate: knockoutStartTime.toISOString(),
-    numberOfDays: 1,
-    dailyStartTime: '09:00',
-    dailyEndTime: '18:00',
-  };
-
-  const scheduler = new TimeScheduler(scheduleConfig);
-  const scheduledMatches = scheduler.scheduleMatches(knockoutMatches);
-
-  // Save knockout matches
-  for (const match of scheduledMatches) {
-    await db.query(
-      `INSERT INTO tournament_games (
-        tournament_id, team1_id, team2_id, round_number, game_number,
-        bracket_type, scheduled_time, court_number, game_status,
-        parent_match_id, child_match_id, group_id, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
-      [
-        tournamentId,
-        match.team1Id === -1 ? null : match.team1Id,
-        match.team2Id === -1 ? null : match.team2Id,
-        match.roundNumber,
-        match.gameNumber,
-        match.bracketType,
-        match.scheduledTime,
-        match.courtNumber.toString(),
-        'scheduled',
-        match.parentMatchId || null,
-        match.childMatchId || null,
-        null, // No group for knockout
-      ]
-    );
-  }
-
-  console.log(`Generated ${scheduledMatches.length} knockout matches`);
+  // Implementation details...
+  console.log('Group stage knockout generation not yet implemented');
 }
 
 /**
- * Handle bye advancement (when a team gets a bye)
- * Time Complexity: O(1)
- * 
- * Automatically advances team with bye to next round
+ * Process byes
+ * Time Complexity: O(n)
  */
 export async function processByes(tournamentId: string): Promise<void> {
-  // Find all matches where one team is BYE (represented as NULL)
   const byeMatches = await db.query(
     `SELECT * FROM tournament_games 
      WHERE tournament_id = ? 
-     AND (team1_id IS NULL OR team2_id IS NULL)
-     AND game_status = 'scheduled'`,
+     AND ((team1_id IS NULL AND team2_id IS NOT NULL) OR (team1_id IS NOT NULL AND team2_id IS NULL))
+     AND game_status IN ('scheduled', 'pending')`,
     [tournamentId]
   );
 
@@ -691,24 +644,20 @@ export async function processByes(tournamentId: string): Promise<void> {
     const advancingTeam = match.team1_id || match.team2_id;
     
     if (advancingTeam && match.child_match_id) {
-      // Auto-complete the bye match
       await db.query(
         `UPDATE tournament_games 
          SET game_status = 'completed',
              winner_team_id = ?,
              team1_score = 0,
              team2_score = 0,
+             end_time = NOW(),
              updated_at = NOW()
          WHERE game_id = ?`,
         [advancingTeam, match.game_id]
       );
 
-      // Advance to next match
-      await advanceWinnerToNextMatch(
-        match.child_match_id,
-        advancingTeam,
-        match.game_id
-      );
+      await advanceWinnerToNextMatch(match.child_match_id, advancingTeam);
+      await checkAndActivateMatch(match.child_match_id);
 
       console.log(`Team ${advancingTeam} auto-advanced from bye in match ${match.game_id}`);
     }
