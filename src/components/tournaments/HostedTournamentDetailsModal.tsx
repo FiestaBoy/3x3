@@ -21,12 +21,15 @@ import {
   Edit3,
   Lock,
   Unlock,
+  UserX
 } from "lucide-react";
-import { getTournamentTeams, regenerateTournamentJoinCode, deleteTournament, updateTournamentSettings } from "@/src/lib/db/tournamentActions";
+import { getTournamentTeams, regenerateTournamentJoinCode, deleteTournament, updateTournamentSettings, removeTournamentTeam } from "@/src/lib/db/tournamentActions";
 import ScheduleMatchesModal from "./ScheduleMatchesModal";
 import BracketVisualization from "./BracketVisualization";
 import MatchManagement from "./MatchManagement";
 import { getTournamentSchedule } from "@/src/lib/db/matchScheduler";
+import StandingsDisplay from "./StandingsDisplay";
+import { getTournamentStandings } from "@/src/lib/db/tournamentActions";
 
 interface HostedTournamentDetailsModalProps {
   isOpen: boolean;
@@ -41,7 +44,7 @@ export default function HostedTournamentDetailsModal({
   tournamentId,
   tournament,
 }: HostedTournamentDetailsModalProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "teams" | "matches" | "bracket" | "settings">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "teams" | "standings" | "matches" | "bracket" | "settings">("overview");
   const [teams, setTeams] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -53,6 +56,27 @@ export default function HostedTournamentDetailsModal({
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [matches, setMatches] = useState<any[]>([]);
   const [scheduleGenerated, setScheduleGenerated] = useState(false);
+  const [standings, setStandings] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (isOpen && activeTab === "standings") {
+      loadStandings();
+    }
+  }, [isOpen, activeTab, scheduleGenerated]);
+
+  const loadStandings = async () => {
+    setIsLoading(true);
+    try {
+      const result = await getTournamentStandings(tournamentId);
+      if (result.success) {
+        setStandings(result.standings);
+      }
+    } catch (error) {
+      console.error("Failed to load standings:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen && (activeTab === "bracket" || activeTab === "matches")) {
@@ -238,16 +262,18 @@ export default function HostedTournamentDetailsModal({
               Teams ({tournament.registered_teams || 0})
             </button>
             <button
+              className={`tab ${activeTab === "standings" ? "tab-active" : ""}`}
+              onClick={() => setActiveTab("standings")}
+            >
+              <Trophy size={16} className="mr-2" />
+              Standings
+            </button>
+            <button
               className={`tab ${activeTab === "matches" ? "tab-active" : ""}`}
               onClick={() => setActiveTab("matches")}
             >
               <Clipboard size={16} className="mr-2" />
               Match Management
-              {scheduleGenerated && matches.filter(m => m.game_status === 'scheduled').length > 0 && (
-                <span className="badge badge-sm badge-primary ml-2">
-                  {matches.filter(m => m.game_status === 'scheduled').length}
-                </span>
-              )}
             </button>
             <button
               className={`tab ${activeTab === "bracket" ? "tab-active" : ""}`}
@@ -276,7 +302,15 @@ export default function HostedTournamentDetailsModal({
           )}
 
           {activeTab === "teams" && (
-            <TeamsTab teams={teams} isLoading={isLoading} />
+            <TeamsTab teams={teams} isLoading={isLoading} tournamentId={tournamentId} onUpdate={loadTeams} />
+          )}
+
+          {activeTab === "standings" && (
+            <StandingsDisplay 
+              teams={standings} 
+              isLoading={isLoading}
+              format={tournament.format}
+            />
           )}
 
           {activeTab === "matches" && (
@@ -430,9 +464,47 @@ function InfoCard({ icon, label, value, subtitle }: InfoCardProps) {
 interface TeamsTabProps {
   teams: any[];
   isLoading: boolean;
+  tournamentId: string;
+  onUpdate: () => void;
 }
 
-function TeamsTab({ teams, isLoading }: TeamsTabProps) {
+function TeamsTab({ teams, isLoading, tournamentId, onUpdate }: TeamsTabProps) {
+  const [removingTeamId, setRemovingTeamId] = useState<string | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+  const [message, setMessage] = useState<{
+    type: "success" | "error";
+    text: string;
+  } | null>(null);
+
+  const showMessage = (type: "success" | "error", text: string) => {
+    setMessage({ type, text });
+    setTimeout(() => setMessage(null), 3000);
+  };
+
+  const handleRemoveTeam = async (teamId: string, teamName: string) => {
+    if (confirmRemove !== teamId) {
+      setConfirmRemove(teamId);
+      return;
+    }
+
+    setRemovingTeamId(teamId);
+    try {
+      const result = await removeTournamentTeam(tournamentId, teamId);
+      
+      if (result.success) {
+        showMessage("success", `${teamName} has been removed from the tournament`);
+        setConfirmRemove(null);
+        onUpdate();
+      } else {
+        showMessage("error", result.message);
+      }
+    } catch (error) {
+      showMessage("error", "Failed to remove team");
+    } finally {
+      setRemovingTeamId(null);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -455,6 +527,16 @@ function TeamsTab({ teams, isLoading }: TeamsTabProps) {
 
   return (
     <div className="space-y-4">
+      {message && (
+        <div
+          className={`alert ${
+            message.type === "success" ? "alert-success" : "alert-error"
+          }`}
+        >
+          <span>{message.text}</span>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-4">
         <h4 className="font-semibold">Registered Teams</h4>
         <span className="badge badge-lg">{teams.length} Teams</span>
@@ -469,6 +551,8 @@ function TeamsTab({ teams, isLoading }: TeamsTabProps) {
               <th>Age Group</th>
               <th>Captain</th>
               <th>Members</th>
+              <th>Registered</th>
+              <th className="text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -481,10 +565,60 @@ function TeamsTab({ teams, isLoading }: TeamsTabProps) {
                 </td>
                 <td>{team.captain_name}</td>
                 <td>{team.member_count || 0}</td>
+                <td className="text-sm text-base-content/70">
+                  {new Date(team.registered_at).toLocaleDateString()}
+                </td>
+                <td className="text-right">
+                  {confirmRemove === team.team_id ? (
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        className="btn btn-xs btn-ghost"
+                        onClick={() => setConfirmRemove(null)}
+                        disabled={removingTeamId === team.team_id}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        className="btn btn-xs btn-error"
+                        onClick={() => handleRemoveTeam(team.team_id, team.name)}
+                        disabled={removingTeamId === team.team_id}
+                      >
+                        {removingTeamId === team.team_id ? (
+                          <span className="loading loading-spinner loading-xs"></span>
+                        ) : (
+                          <>
+                            <UserX size={12} />
+                            Confirm
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      className="btn btn-xs btn-ghost btn-error"
+                      onClick={() => setConfirmRemove(team.team_id)}
+                      disabled={removingTeamId !== null}
+                      title="Remove team from tournament"
+                    >
+                      <UserX size={14} />
+                      Remove
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div className="alert alert-warning">
+        <AlertTriangle size={20} />
+        <div>
+          <p className="text-sm">
+            <strong>Note:</strong> Teams can only be removed before they start playing matches.
+            Removing a team will cancel all their scheduled games.
+          </p>
+        </div>
       </div>
     </div>
   );

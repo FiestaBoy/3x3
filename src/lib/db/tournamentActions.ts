@@ -603,3 +603,136 @@ export async function deleteTournament(tournamentId: string) {
     return { success: false, message: "Failed to delete tournament" };
   }
 }
+
+export async function removeTournamentTeam(tournamentId: string, teamId: string) {
+  try {
+    const session = await getUserSession();
+
+    // Verify user is the organizer
+    const organizerCheck = await db.query(
+      "SELECT organizer_id FROM tournaments WHERE tournament_id = ?",
+      [tournamentId]
+    );
+
+    if (!organizerCheck || organizerCheck.length === 0) {
+      return { success: false, message: "Tournament not found" };
+    }
+
+    if (String(organizerCheck[0].organizer_id) !== String(session.userId)) {
+      return {
+        success: false,
+        message: "Only organizers can remove teams",
+      };
+    }
+
+    // Check if tournament has started (has completed or in-progress games)
+    const hasStarted = await db.query(
+      `SELECT COUNT(*) as count 
+       FROM tournament_games 
+       WHERE tournament_id = ? 
+       AND (team1_id = ? OR team2_id = ?) 
+       AND game_status IN ('completed', 'in_progress')`,
+      [tournamentId, teamId, teamId]
+    );
+
+    if (hasStarted[0].count > 0) {
+      return {
+        success: false,
+        message: "Cannot remove team after they have started playing matches",
+      };
+    }
+
+    // Check if team is registered
+    const registrationCheck = await db.query(
+      "SELECT 1 FROM team_tournament WHERE tournament_id = ? AND team_id = ?",
+      [tournamentId, teamId]
+    );
+
+    if (!registrationCheck || registrationCheck.length === 0) {
+      return {
+        success: false,
+        message: "Team is not registered in this tournament",
+      };
+    }
+
+    // Remove the team from tournament
+    await db.query(
+      "DELETE FROM team_tournament WHERE tournament_id = ? AND team_id = ?",
+      [tournamentId, teamId]
+    );
+
+    // If there are scheduled games for this team, cancel them
+    await db.query(
+      `UPDATE tournament_games 
+       SET game_status = 'cancelled' 
+       WHERE tournament_id = ? 
+       AND (team1_id = ? OR team2_id = ?) 
+       AND game_status = 'scheduled'`,
+      [tournamentId, teamId, teamId]
+    );
+
+    revalidatePath("/tournaments");
+
+    return {
+      success: true,
+      message: "Team removed from tournament successfully",
+    };
+  } catch (error) {
+    console.error("Error removing team from tournament:", error);
+    return { success: false, message: "Failed to remove team from tournament" };
+  }
+}
+
+export async function getTournamentStandings(tournamentId: string) {
+  try {
+    const query = `
+      SELECT 
+        t.team_id,
+        t.name as team_name,
+        COALESCE(SUM(CASE 
+          WHEN tg.winner_team_id = t.team_id THEN 1 
+          ELSE 0 
+        END), 0) as wins,
+        COALESCE(SUM(CASE 
+          WHEN tg.game_status = 'completed' AND tg.winner_team_id != t.team_id 
+            AND (tg.team1_id = t.team_id OR tg.team2_id = t.team_id)
+          THEN 1 
+          ELSE 0 
+        END), 0) as losses,
+        COALESCE(SUM(CASE 
+          WHEN tg.team1_id = t.team_id THEN tg.team1_score
+          WHEN tg.team2_id = t.team_id THEN tg.team2_score
+          ELSE 0
+        END), 0) as points_for,
+        COALESCE(SUM(CASE 
+          WHEN tg.team1_id = t.team_id THEN tg.team2_score
+          WHEN tg.team2_id = t.team_id THEN tg.team1_score
+          ELSE 0
+        END), 0) as points_against,
+        COALESCE(SUM(CASE 
+          WHEN tg.team1_id = t.team_id THEN (tg.team1_score - tg.team2_score)
+          WHEN tg.team2_id = t.team_id THEN (tg.team2_score - tg.team1_score)
+          ELSE 0
+        END), 0) as point_differential,
+        COALESCE(COUNT(CASE 
+          WHEN tg.game_status = 'completed' 
+            AND (tg.team1_id = t.team_id OR tg.team2_id = t.team_id)
+          THEN 1 
+        END), 0) as matches_played
+      FROM teams t
+      INNER JOIN team_tournament tt ON t.team_id = tt.team_id
+      LEFT JOIN tournament_games tg ON tt.tournament_id = tg.tournament_id
+        AND (tg.team1_id = t.team_id OR tg.team2_id = t.team_id)
+      WHERE tt.tournament_id = ?
+      GROUP BY t.team_id, t.name
+      ORDER BY wins DESC, point_differential DESC, points_for DESC
+    `;
+
+    const standings = await db.query(query, [tournamentId]);
+
+    return { success: true, standings };
+  } catch (error) {
+    console.error("Error fetching tournament standings:", error);
+    return { success: false, standings: [] };
+  }
+}

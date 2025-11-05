@@ -5,7 +5,7 @@
  * Coordinates bracket generation, time scheduling, and database operations
  * 
  * This is the main entry point for tournament schedule generation
- * Handles all four tournament formats with unified interface
+ * Handles single elimination and round robin formats
  * 
  * Binary Tree Structure:
  * - Each match has ONE parent_match_id (the match it came from)
@@ -79,7 +79,15 @@ export async function generateTournamentSchedule(
       };
     }
 
-    // Step 2: Check if schedule already exists
+    // Step 2: Validate tournament format
+    if (tournament.format !== 'single_elimination' && tournament.format !== 'round_robin') {
+      return {
+        success: false,
+        message: 'Only Single Elimination and Round Robin formats are supported',
+      };
+    }
+
+    // Step 3: Check if schedule already exists
     const existingMatches = await db.query(
       'SELECT COUNT(*) as count FROM tournament_games WHERE tournament_id = ? AND game_status != "cancelled"',
       [params.tournamentId]
@@ -92,7 +100,7 @@ export async function generateTournamentSchedule(
       };
     }
 
-    // Step 3: Fetch registered teams
+    // Step 4: Fetch registered teams
     const teams = await getRegisteredTeams(params.tournamentId);
     
     if (teams.length < 4) {
@@ -104,7 +112,7 @@ export async function generateTournamentSchedule(
 
     console.log(`Found ${teams.length} registered teams`);
 
-    // Step 4: Create scheduler configuration
+    // Step 5: Create scheduler configuration
     const scheduleConfig: ScheduleConfig = {
       numberOfCourts: params.numberOfCourts,
       gameDurationMinutes: params.gameDurationMinutes,
@@ -117,7 +125,7 @@ export async function generateTournamentSchedule(
 
     const scheduler = new TimeScheduler(scheduleConfig);
 
-    // Step 5: Validate configuration
+    // Step 6: Validate configuration
     const validation = scheduler.validateConfiguration();
     if (!validation.valid) {
       return {
@@ -126,13 +134,12 @@ export async function generateTournamentSchedule(
       };
     }
 
-    // Step 6: Generate bracket based on tournament format
+    // Step 7: Generate bracket based on tournament format
     let bracketMatches;
     
     switch (tournament.format) {
       case 'single_elimination':
-        const { generateSingleEliminationBracket: genSE } = require('./brackets/singleElimination');
-        bracketMatches = genSE(teams);
+        bracketMatches = generateSingleEliminationBracket(teams);
         break;
       
       case 'round_robin':
@@ -140,26 +147,16 @@ export async function generateTournamentSchedule(
         bracketMatches = generateRoundRobinSchedule(teams);
         break;
       
-      case 'double_elimination':
-        const { generateDoubleEliminationBracket } = require('./brackets/doubleElimination');
-        bracketMatches = generateDoubleEliminationBracket(teams);
-        break;
-      
-      case 'group_stage':
-        const { generateGroupStageKnockout } = require('./brackets/groupStage');
-        bracketMatches = generateGroupStageKnockout(teams, 2);
-        break;
-      
       default:
         return {
           success: false,
-          message: `Unknown tournament format: ${tournament.format}`,
+          message: `Unsupported tournament format: ${tournament.format}`,
         };
     }
 
     console.log(`Generated ${bracketMatches.length} matches for bracket`);
 
-    // Step 7: Check if tournament duration is sufficient
+    // Step 8: Check if tournament duration is sufficient
     const estimation = scheduler.estimateTournamentDuration(bracketMatches.length);
     if (estimation.warning) {
       return {
@@ -168,12 +165,12 @@ export async function generateTournamentSchedule(
       };
     }
 
-    // Step 8: Schedule matches with times and courts
+    // Step 9: Schedule matches with times and courts
     const scheduledMatches = scheduler.scheduleMatches(bracketMatches);
     
     console.log(`Scheduled ${scheduledMatches.length} matches`);
 
-    // Step 9: Save to database with proper binary tree structure
+    // Step 10: Save to database with proper binary tree structure
     await saveScheduleToDatabase(params.tournamentId, scheduledMatches);
 
     return {
@@ -291,10 +288,9 @@ async function saveScheduleToDatabase(
         scheduled_time,
         court_number,
         game_status,
-        group_id,
         created_at,
         updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
     `;
 
     const values = [
@@ -307,7 +303,6 @@ async function saveScheduleToDatabase(
       scheduledTime,
       match.courtNumber?.toString(),
       gameStatus,
-      match.groupId || null,
     ];
 
     const result = await db.query(insertQuery, values);
@@ -326,7 +321,7 @@ async function saveScheduleToDatabase(
   console.log(`\n📊 Total matches inserted: ${matches.length}`);
   console.log(`📊 GameId mappings created: ${gameIdToDbId.size}\n`);
 
-  // Second pass: Update parent and child relationships
+  // Second pass: Update parent and child relationships (only for single elimination)
   console.log('🔗 SECOND PASS: Setting up parent-child relationships...\n');
   
   let relationshipsSet = 0;

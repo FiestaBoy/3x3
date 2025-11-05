@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { getTournaments, getJoinedTournaments, getHostedTournaments } from "@/src/lib/db/tournamentActions";
-import TournamentCard from "@/src/components/tournaments/TournamentCard";
+import TournamentCard from "@/src/components/tournaments/PublicTournamentCard";
 import JoinedTournamentCard from "@/src/components/tournaments/JoinedTournamentCard";
 import HostedTournamentCard from "@/src/components/tournaments/HostedTournamentCard";
 

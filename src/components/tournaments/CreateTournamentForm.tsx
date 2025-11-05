@@ -24,16 +24,14 @@ const schema = z
     location: z.string().min(1, { message: "Location is required" }),
     address: z.string().optional(),
     venueDetails: z.string().optional(),
-    ageGroup: z.enum(["U12", "U14", "U16", "U18", "Adult"]),
+    ageGroup: z.enum(["U12", "U14", "U16", "Adult"]),
     maxTeams: z
       .number()
       .min(4, { message: "Minimum 4 teams" })
       .max(64, { message: "Maximum 64 teams" }),
     format: z.enum([
       "single_elimination",
-      "double_elimination",
       "round_robin",
-      "group_stage",
     ]),
     gameDuration: z
       .number()
@@ -409,11 +407,7 @@ export default function CreateTournamentForm() {
                       <option value="single_elimination">
                         Single Elimination
                       </option>
-                      <option value="double_elimination">
-                        Double Elimination
-                      </option>
                       <option value="round_robin">Round Robin</option>
-                      <option value="group_stage">Group Stage</option>
                     </select>
                     {errors.format && (
                       <span className="text-xs text-error mt-1">

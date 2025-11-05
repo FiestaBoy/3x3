@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import TournamentDetailsModal from "./TournamentDetailsModal";
+import TournamentDetailsModal from "./PublicTournamentDetailsModal";
 
 interface Tournament {
   tournament_id: string;

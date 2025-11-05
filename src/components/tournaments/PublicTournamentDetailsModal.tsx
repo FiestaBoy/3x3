@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { getCaptainTeamNames } from "@/src/lib/db/helpers";
 import { joinPublicTournament } from "@/src/lib/db/tournamentActions";
+import StandingsDisplay from "./StandingsDisplay";
+import { getTournamentStandings } from "@/src/lib/db/tournamentActions";
 
 interface TournamentDetailsModalProps {
   isOpen: boolean;
@@ -28,7 +30,7 @@ export default function TournamentDetailsModal({
   tournamentId,
   tournament,
 }: TournamentDetailsModalProps) {
-  const [activeTab, setActiveTab] = useState<"details" | "register">("details");
+  const [activeTab, setActiveTab] = useState<"details" | "standings" | "register">("details");
   const [teams, setTeams] = useState<{ team_id: string; name: string }[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
@@ -36,6 +38,28 @@ export default function TournamentDetailsModal({
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [standings, setStandings] = useState<any[]>([]);
+  const [isLoadingStandings, setIsLoadingStandings] = useState(false);
+
+  useEffect(() => {
+    if (isOpen && activeTab === "standings") {
+      loadStandings();
+    }
+  }, [isOpen, activeTab]);
+
+  const loadStandings = async () => {
+    setIsLoadingStandings(true);
+    try {
+      const result = await getTournamentStandings(tournamentId);
+      if (result.success) {
+        setStandings(result.standings);
+      }
+    } catch (error) {
+      console.error("Failed to load standings:", error);
+    } finally {
+      setIsLoadingStandings(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen && activeTab === "register") {
@@ -168,6 +192,13 @@ export default function TournamentDetailsModal({
             Tournament Details
           </button>
           <button
+            className={`tab ${activeTab === "standings" ? "tab-active" : ""}`}
+            onClick={() => setActiveTab("standings")}
+          >
+            <Trophy size={16} className="mr-1" />
+            Standings
+          </button>
+          <button
             className={`tab ${activeTab === "register" ? "tab-active" : ""}`}
             onClick={() => setActiveTab("register")}
             disabled={!registrationStatus.canRegister}
@@ -177,9 +208,19 @@ export default function TournamentDetailsModal({
         </div>
 
         {/* Tab Content */}
-        {activeTab === "details" ? (
+        {activeTab === "details" && (
           <DetailsTab tournament={tournament} formatDate={formatDate} formatDateTime={formatDateTime} formatTournamentFormat={formatTournamentFormat} />
-        ) : (
+        )}
+
+        {activeTab === "standings" && (
+          <StandingsDisplay 
+            teams={standings} 
+            isLoading={isLoadingStandings}
+            format={tournament.format}
+          />
+        )}
+
+        {activeTab === "register" && (
           <RegisterTab
             teams={teams}
             selectedTeamId={selectedTeamId}

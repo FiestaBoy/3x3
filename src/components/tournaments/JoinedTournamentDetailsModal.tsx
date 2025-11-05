@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import { withdrawFromTournament } from "@/src/lib/db/tournamentActions";
 import { getTeamSchedule } from "@/src/lib/db/matchScheduler";
+import StandingsDisplay from "./StandingsDisplay";
+import { getTournamentStandings } from "@/src/lib/db/tournamentActions";
 
 
 interface JoinedTournamentDetailsModalProps {
@@ -30,13 +32,34 @@ export default function JoinedTournamentDetailsModal({
   tournamentId,
   tournament,
 }: JoinedTournamentDetailsModalProps) {
-  const [activeTab, setActiveTab] = useState<"details" | "bracket" | "schedule">("details");
+  const [activeTab, setActiveTab] = useState<"details" | "standings" | "bracket" | "schedule">("details");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
     text: string;
   } | null>(null);
   const [teamMatches, setTeamMatches] = useState<any[]>([]);
+  const [standings, setStandings] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (isOpen && activeTab === "standings") {
+      loadStandings();
+    }
+  }, [isOpen, activeTab]);
+
+  const loadStandings = async () => {
+    setIsLoading(true);
+    try {
+      const result = await getTournamentStandings(tournamentId);
+      if (result.success) {
+        setStandings(result.standings);
+      }
+    } catch (error) {
+      console.error("Failed to load standings:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen && activeTab === "schedule" && tournament.team_id) {
@@ -158,6 +181,13 @@ export default function JoinedTournamentDetailsModal({
             Details
           </button>
           <button
+            className={`tab ${activeTab === "standings" ? "tab-active" : ""}`}
+            onClick={() => setActiveTab("standings")}
+          >
+            <Trophy size={16} className="mr-1" />
+            Standings
+          </button>
+          <button
             className={`tab ${activeTab === "bracket" ? "tab-active" : ""}`}
             onClick={() => setActiveTab("bracket")}
           >
@@ -174,6 +204,14 @@ export default function JoinedTournamentDetailsModal({
         {/* Tab Content */}
         {activeTab === "details" && (
           <DetailsTab tournament={tournament} formatDate={formatDate} formatDateTime={formatDateTime} formatTournamentFormat={formatTournamentFormat} />
+        )}
+
+        {activeTab === "standings" && (
+          <StandingsDisplay 
+            teams={standings} 
+            isLoading={isLoading}
+            format={tournament.format}
+          />
         )}
 
         {activeTab === "bracket" && (
