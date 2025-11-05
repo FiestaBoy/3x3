@@ -14,10 +14,10 @@ import {
   LogOut,
 } from "lucide-react";
 import { withdrawFromTournament } from "@/src/lib/db/tournamentActions";
-import { getTeamSchedule } from "@/src/lib/db/matchScheduler";
+import { getTournamentSchedule } from "@/src/lib/db/tournamentScheduler";
 import StandingsDisplay from "./StandingsDisplay";
 import { getTournamentStandings } from "@/src/lib/db/tournamentActions";
-
+import BracketVisualization from "./BracketVisualization";
 
 interface JoinedTournamentDetailsModalProps {
   isOpen: boolean;
@@ -39,6 +39,7 @@ export default function JoinedTournamentDetailsModal({
     text: string;
   } | null>(null);
   const [teamMatches, setTeamMatches] = useState<any[]>([]);
+  const [allMatches, setAllMatches] = useState<any[]>([]);
   const [standings, setStandings] = useState<any[]>([]);
 
   useEffect(() => {
@@ -62,6 +63,26 @@ export default function JoinedTournamentDetailsModal({
   };
 
   useEffect(() => {
+    if (isOpen && activeTab === "bracket") {
+      loadAllMatches();
+    }
+  }, [isOpen, activeTab]);
+
+  const loadAllMatches = async () => {
+    setIsLoading(true);
+    try {
+      const result = await getTournamentSchedule(tournamentId);
+      if (result.success) {
+        setAllMatches(result.matches);
+      }
+    } catch (error) {
+      console.error("Failed to load matches:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
     if (isOpen && activeTab === "schedule" && tournament.team_id) {
       loadTeamSchedule();
     }
@@ -70,9 +91,15 @@ export default function JoinedTournamentDetailsModal({
   const loadTeamSchedule = async () => {
     setIsLoading(true);
     try {
-      const result = await getTeamSchedule(tournamentId, tournament.team_id);
+      const result = await getTournamentSchedule(tournamentId);
       if (result.success) {
-        setTeamMatches(result.matches);
+        // Filter matches for this specific team
+        const teamSpecificMatches = result.matches.filter(
+          (match: any) => 
+            match.team1_id === tournament.team_id || 
+            match.team2_id === tournament.team_id
+        );
+        setTeamMatches(teamSpecificMatches);
       }
     } catch (error) {
       console.error("Failed to load schedule:", error);
@@ -215,7 +242,11 @@ export default function JoinedTournamentDetailsModal({
         )}
 
         {activeTab === "bracket" && (
-          <BracketTab />
+          <BracketTab 
+            matches={allMatches}
+            tournament={tournament}
+            isLoading={isLoading}
+          />
         )}
 
         {activeTab === "schedule" && (
@@ -348,16 +379,34 @@ function InfoCard({ icon, label, value, subtitle }: InfoCardProps) {
   );
 }
 
-function BracketTab() {
-  return (
-    <div className="bg-base-200 p-8 rounded-lg text-center">
-      <Trophy size={48} className="mx-auto mb-4 text-base-content/50" />
-      <h4 className="font-semibold mb-2">Tournament Bracket</h4>
-      <p className="text-sm text-base-content/70">
-        The bracket will be available once the tournament starts and matches are scheduled.
-      </p>
-    </div>
-  );
+interface BracketTabProps {
+  matches: any[];
+  tournament: any;
+  isLoading: boolean;
+}
+
+function BracketTab({ matches, tournament, isLoading }: BracketTabProps) {
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
+    );
+  }
+
+  if (matches.length === 0) {
+    return (
+      <div className="bg-base-200 p-8 rounded-lg text-center">
+        <Trophy size={48} className="mx-auto mb-4 text-base-content/50" />
+        <h4 className="font-semibold mb-2">Tournament Bracket</h4>
+        <p className="text-sm text-base-content/70">
+          The bracket will be available once the tournament starts and matches are scheduled.
+        </p>
+      </div>
+    );
+  }
+
+  return <BracketVisualization matches={matches} tournament={tournament} />;
 }
 
 interface ScheduleTabProps {

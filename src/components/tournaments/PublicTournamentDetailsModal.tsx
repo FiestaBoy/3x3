@@ -16,6 +16,8 @@ import { getCaptainTeamNames } from "@/src/lib/db/helpers";
 import { joinPublicTournament } from "@/src/lib/db/tournamentActions";
 import StandingsDisplay from "./StandingsDisplay";
 import { getTournamentStandings } from "@/src/lib/db/tournamentActions";
+import { getTournamentSchedule } from "@/src/lib/db/tournamentScheduler";
+import BracketVisualization from "./BracketVisualization";
 
 interface TournamentDetailsModalProps {
   isOpen: boolean;
@@ -30,7 +32,7 @@ export default function TournamentDetailsModal({
   tournamentId,
   tournament,
 }: TournamentDetailsModalProps) {
-  const [activeTab, setActiveTab] = useState<"details" | "standings" | "register">("details");
+  const [activeTab, setActiveTab] = useState<"details" | "standings" | "bracket" | "register">("details");
   const [teams, setTeams] = useState<{ team_id: string; name: string }[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
@@ -40,6 +42,8 @@ export default function TournamentDetailsModal({
   } | null>(null);
   const [standings, setStandings] = useState<any[]>([]);
   const [isLoadingStandings, setIsLoadingStandings] = useState(false);
+  const [matches, setMatches] = useState<any[]>([]);
+  const [isLoadingMatches, setIsLoadingMatches] = useState(false);
 
   useEffect(() => {
     if (isOpen && activeTab === "standings") {
@@ -58,6 +62,26 @@ export default function TournamentDetailsModal({
       console.error("Failed to load standings:", error);
     } finally {
       setIsLoadingStandings(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && activeTab === "bracket") {
+      loadMatches();
+    }
+  }, [isOpen, activeTab]);
+
+  const loadMatches = async () => {
+    setIsLoadingMatches(true);
+    try {
+      const result = await getTournamentSchedule(tournamentId);
+      if (result.success) {
+        setMatches(result.matches);
+      }
+    } catch (error) {
+      console.error("Failed to load matches:", error);
+    } finally {
+      setIsLoadingMatches(false);
     }
   };
 
@@ -189,7 +213,7 @@ export default function TournamentDetailsModal({
             className={`tab ${activeTab === "details" ? "tab-active" : ""}`}
             onClick={() => setActiveTab("details")}
           >
-            Tournament Details
+            Details
           </button>
           <button
             className={`tab ${activeTab === "standings" ? "tab-active" : ""}`}
@@ -197,6 +221,13 @@ export default function TournamentDetailsModal({
           >
             <Trophy size={16} className="mr-1" />
             Standings
+          </button>
+          <button
+            className={`tab ${activeTab === "bracket" ? "tab-active" : ""}`}
+            onClick={() => setActiveTab("bracket")}
+          >
+            <Trophy size={16} className="mr-1" />
+            Bracket
           </button>
           <button
             className={`tab ${activeTab === "register" ? "tab-active" : ""}`}
@@ -217,6 +248,14 @@ export default function TournamentDetailsModal({
             teams={standings} 
             isLoading={isLoadingStandings}
             format={tournament.format}
+          />
+        )}
+
+        {activeTab === "bracket" && (
+          <BracketTab 
+            matches={matches}
+            tournament={tournament}
+            isLoading={isLoadingMatches}
           />
         )}
 
@@ -456,4 +495,34 @@ function RegisterTab({
       )}
     </div>
   );
+}
+
+interface BracketTabProps {
+  matches: any[];
+  tournament: any;
+  isLoading: boolean;
+}
+
+function BracketTab({ matches, tournament, isLoading }: BracketTabProps) {
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
+    );
+  }
+
+  if (matches.length === 0) {
+    return (
+      <div className="bg-base-200 p-8 rounded-lg text-center">
+        <Trophy size={48} className="mx-auto mb-4 text-base-content/50" />
+        <h4 className="font-semibold mb-2">Tournament Bracket</h4>
+        <p className="text-sm text-base-content/70">
+          The bracket will be available once the organizer schedules matches.
+        </p>
+      </div>
+    );
+  }
+
+  return <BracketVisualization matches={matches} tournament={tournament} />;
 }
