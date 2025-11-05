@@ -14,9 +14,11 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <head></head>
-      <body className="bg-base-200 pt-24 min-h-screen">
+      <body className="min-h-screen">
         <Navbar session={session} />
-        {children}
+        <main className="pt-16">
+          {children}
+        </main>
         <Footer />
       </body>
     </html>

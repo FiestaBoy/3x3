@@ -52,27 +52,27 @@ export default function RegisterForm() {
   return (
     <>
       <form
-        className="flex flex-col gap-4 w-full items-center"
+        className="flex flex-col gap-5 w-full"
         noValidate
         onSubmit={handleSubmit(onSubmit)}
       >
-        <div className="w-72 flex flex-col gap-0.75">
+        <div className="flex flex-col gap-1">
           <input
             {...register("name")}
             type="text"
-            className={`input ${errors["name"] && "input-error"} focus:input-primary`}
+            className={`input input-bordered ${errors["name"] && "input-error"} focus:input-primary transition-all hover:border-primary/50`}
             placeholder="Team name"
           />
           {errors["name"] && (
-            <span className="text-xs text-error">
+            <span className="text-xs text-error font-medium">
               {errors["name"]?.message}
             </span>
           )}
         </div>
-        <div className="w-72 flex flex-col gap-0.75">
+        <div className="flex flex-col gap-1">
           <select
             {...register("ageGroup")}
-            className={`select ${errors["ageGroup"] && "input-error"} focus:input-primary`}
+            className={`select select-bordered ${errors["ageGroup"] && "input-error"} focus:input-primary transition-all hover:border-primary/50`}
             defaultValue={"Select an age group"}
           >
             <option disabled={true}>Select an age group</option>
@@ -82,24 +82,31 @@ export default function RegisterForm() {
             <option>Adult</option>
           </select>
           {errors["ageGroup"] && (
-            <span className="text-xs text-error">
+            <span className="text-xs text-error font-medium">
               {errors["ageGroup"]?.message}
             </span>
           )}
         </div>
         <button
           type="submit"
-          className="btn self-center"
+          className="btn btn-primary w-full shadow-lg hover:shadow-xl transition-all mt-2"
           disabled={isSubmitting || Object.keys(errors).length > 0}
         >
-          {isSubmitting ? "Submitting..." : "Register"}
+          {isSubmitting ? (
+            <>
+              <span className="loading loading-spinner loading-sm"></span>
+              Creating team...
+            </>
+          ) : (
+            "Create Team"
+          )}
         </button>
       </form>
       {rootMessage && (
-        <div className="alert alert-error">
+        <div className="alert alert-error shadow-lg mt-4">
           <span>{rootMessage}</span>
           <button
-            className="btn btn-sm btn-ghost ml-2"
+            className="btn btn-sm btn-ghost hover:bg-error/20"
             onClick={() => setRootMessage(null)}
           >
             ✕

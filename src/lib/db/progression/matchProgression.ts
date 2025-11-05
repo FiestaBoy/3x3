@@ -186,11 +186,6 @@ export async function enterMatchResult(
     // Step 8: Check if tournament is complete
     const tournamentComplete = await checkTournamentComplete(match.tournament_id);
 
-    // Step 8b: For group stage format, check if knockout should be generated
-    if (match.group_id !== null && !tournamentComplete) {
-      await handleGroupStageCompletion(match.tournament_id);
-    }
-
     // Step 9: If tournament complete, calculate final positions
     if (tournamentComplete) {
       await calculateFinalStandings(match.tournament_id);
@@ -423,27 +418,6 @@ async function handleGrandFinalsBracketReset(
 }
 
 /**
- * Handle group stage completion
- * Time Complexity: O(n log n)
- */
-async function handleGroupStageCompletion(tournamentId: string): Promise<void> {
-  const { isGroupStageComplete } = require('../brackets/groupStage');
-  const groupStageComplete = await isGroupStageComplete(tournamentId, db);
-  
-  if (!groupStageComplete) return;
-
-  const knockoutExists = await db.query(
-    'SELECT COUNT(*) as count FROM tournament_games WHERE tournament_id = ? AND group_id IS NULL',
-    [tournamentId]
-  );
-
-  if (knockoutExists[0].count === 0) {
-    console.log('Group stage complete, generating knockout bracket');
-    await generateGroupStageKnockout(tournamentId);
-  }
-}
-
-/**
  * Update team statistics
  * Time Complexity: O(1)
  */
@@ -616,15 +590,6 @@ async function getLosersBracketChampion(tournamentId: string): Promise<any | nul
   );
 
   return result && result.length > 0 ? result[0] : null;
-}
-
-/**
- * Generate knockout bracket after group stage
- * Time Complexity: O(n log n)
- */
-async function generateGroupStageKnockout(tournamentId: string): Promise<void> {
-  // Implementation details...
-  console.log('Group stage knockout generation not yet implemented');
 }
 
 /**

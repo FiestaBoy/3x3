@@ -10,12 +10,12 @@ export default async function Page() {
   const hostedResponse = await getHostedTournaments();
 
   return (
-    <div className="min-h-screen bg-base-200 py-8">
-      <div className="max-w-7xl mx-auto px-4">
+    <div className="min-h-screen bg-gradient-to-br from-base-200 via-base-300 to-base-200 py-12 px-4">
+      <div className="max-w-7xl mx-auto">
         {/* Header Section */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Tournaments</h1>
-          <p className="text-lg text-muted-foreground mb-6">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Tournaments</h1>
+          <p className="text-lg text-base-content/70 mb-6">
             Browse upcoming 3x3 basketball tournaments or create your own
           </p>
 

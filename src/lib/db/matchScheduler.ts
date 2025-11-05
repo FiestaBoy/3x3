@@ -104,12 +104,6 @@ export async function generateTournamentSchedule(
       case "round_robin":
         matches = generateRoundRobinSchedule(teams);
         break;
-      case "double_elimination":
-        matches = generateDoubleEliminationBracketComplete(teams);
-        break;
-      case "group_stage":
-        matches = generateGroupStageScheduleComplete(teams);
-        break;
       default:
         return { success: false, message: "Unsupported tournament format" };
     }
@@ -429,84 +423,6 @@ function generateRoundRobinSchedule(teams: Team[]): Match[] {
 }
 
 /**
- * Generate Complete Group Stage Schedule
- */
-function generateGroupStageScheduleComplete(teams: Team[]): Match[] {
-  const matches: Match[] = [];
-  const teamCount = teams.length;
-  const groupSize = 4;
-  const groupCount = Math.ceil(teamCount / groupSize);
-
-  const groups: Team[][] = Array.from({ length: groupCount }, () => []);
-  teams.forEach((team, index) => {
-    groups[index % groupCount].push(team);
-  });
-
-  let gameNumber = 1;
-
-  // Group stage matches
-  groups.forEach((group, groupIndex) => {
-    const groupMatches = generateRoundRobinSchedule(group);
-    groupMatches.forEach((match) => {
-      match.game_number = gameNumber++;
-      match.round_number = groupIndex + 1;
-      match.bracket_type = "group";
-      match.group_id = groupIndex + 1;
-    });
-    matches.push(...groupMatches);
-  });
-
-  // Knockout stage structure
-  const knockoutTeams = groupCount * 2;
-  const knockoutRounds = Math.ceil(Math.log2(knockoutTeams));
-  const knockoutGameNumbers: number[][] = [];
-
-  for (let round = 1; round <= knockoutRounds; round++) {
-    const matchCount = Math.pow(2, knockoutRounds - round);
-    const roundNumbers: number[] = [];
-    
-    for (let i = 0; i < matchCount; i++) {
-      matches.push({
-        team1_id: null,
-        team2_id: null,
-        round_number: 100 + round,
-        game_number: gameNumber,
-        bracket_type: round === knockoutRounds ? "finals" : "winners",
-        scheduled_time: null,
-        court_number: null,
-        parent_match_id: null,
-        child_match_id: null,
-      });
-      
-      roundNumbers.push(gameNumber);
-      gameNumber++;
-    }
-    
-    knockoutGameNumbers.push(roundNumbers);
-  }
-
-  // Link knockout parent-child relationships
-  for (let round = 0; round < knockoutGameNumbers.length - 1; round++) {
-    const currentRound = knockoutGameNumbers[round];
-    const nextRound = knockoutGameNumbers[round + 1];
-    
-    for (let i = 0; i < nextRound.length; i++) {
-      const childGameNumber = nextRound[i];
-      const parent1GameNumber = currentRound[i * 2];
-      const parent2GameNumber = currentRound[i * 2 + 1];
-      
-      const parent1 = matches.find(m => m.game_number === parent1GameNumber);
-      const parent2 = matches.find(m => m.game_number === parent2GameNumber);
-      
-      if (parent1) parent1.child_match_id = childGameNumber;
-      if (parent2) parent2.child_match_id = childGameNumber;
-    }
-  }
-
-  return matches;
-}
-
-/**
  * Advanced scheduling with multiple constraints
  */
 async function assignScheduleTimesAdvanced(
@@ -685,13 +601,8 @@ export async function updateMatchResult(
       [team1Score, team2Score, winnerId, gameId]
     );
 
-    if (matchData.tournament_format === 'single_elimination' || 
-        matchData.tournament_format === 'double_elimination') {
+    if (matchData.tournament_format === 'single_elimination') {
       await progressEliminationBracket(matchData.tournament_id, gameId, winnerId, loserId, matchData.tournament_format);
-    }
-
-    if (matchData.bracket_type === 'group') {
-      await checkGroupStageCompletion(matchData.tournament_id);
     }
 
     revalidatePath("/tournaments");
@@ -842,100 +753,6 @@ async function scheduleNextMatch(tournamentId: string, gameId: number) {
      WHERE game_id = ?`,
     [nextTime, gameId]
   );
-}
-
-/**
- * Check if group stage is complete and progress to knockouts
- */
-async function checkGroupStageCompletion(tournamentId: string) {
-  const groupMatches = await db.query(
-    `SELECT COUNT(*) as total, 
-            SUM(CASE WHEN game_status = 'completed' THEN 1 ELSE 0 END) as completed
-     FROM tournament_games 
-     WHERE tournament_id = ? AND bracket_type = 'group'`,
-    [tournamentId]
-  );
-
-  if (groupMatches[0].total === groupMatches[0].completed) {
-    const groups = await db.query(
-      `SELECT DISTINCT group_id FROM tournament_games 
-       WHERE tournament_id = ? AND bracket_type = 'group'`,
-      [tournamentId]
-    );
-
-    const advancingTeams: number[] = [];
-
-    for (const group of groups) {
-      const standings = await calculateGroupStandings(tournamentId, group.group_id);
-      advancingTeams.push(standings[0].team_id, standings[1].team_id);
-    }
-
-    const knockoutMatches = await db.query(
-      `SELECT * FROM tournament_games 
-       WHERE tournament_id = ? 
-       AND bracket_type IN ('winners', 'finals')
-       AND round_number >= 100
-       ORDER BY round_number, game_number`,
-      [tournamentId]
-    );
-
-    for (let i = 0; i < knockoutMatches.length && i * 2 + 1 < advancingTeams.length; i++) {
-      await db.query(
-        `UPDATE tournament_games 
-         SET team1_id = ?, team2_id = ?, game_status = 'scheduled'
-         WHERE game_id = ?`,
-        [advancingTeams[i * 2], advancingTeams[i * 2 + 1], knockoutMatches[i].game_id]
-      );
-
-      await scheduleNextMatch(tournamentId, knockoutMatches[i].game_id);
-    }
-  }
-}
-
-/**
- * Calculate group standings
- */
-async function calculateGroupStandings(tournamentId: string, groupId: number) {
-  const matches = await db.query(
-    `SELECT * FROM tournament_games 
-     WHERE tournament_id = ? AND group_id = ? AND game_status = 'completed'`,
-    [tournamentId, groupId]
-  );
-
-  const standings: Map<number, { team_id: number; points: number; wins: number; gd: number }> = new Map();
-
-  matches.forEach((match: any) => {
-    if (!standings.has(match.team1_id)) {
-      standings.set(match.team1_id, { team_id: match.team1_id, points: 0, wins: 0, gd: 0 });
-    }
-    if (!standings.has(match.team2_id)) {
-      standings.set(match.team2_id, { team_id: match.team2_id, points: 0, wins: 0, gd: 0 });
-    }
-
-    const team1Stats = standings.get(match.team1_id)!;
-    const team2Stats = standings.get(match.team2_id)!;
-
-    if (match.winner_team_id === match.team1_id) {
-      team1Stats.points += 3;
-      team1Stats.wins += 1;
-    } else if (match.winner_team_id === match.team2_id) {
-      team2Stats.points += 3;
-      team2Stats.wins += 1;
-    } else {
-      team1Stats.points += 1;
-      team2Stats.points += 1;
-    }
-
-    team1Stats.gd += (match.team1_score - match.team2_score);
-    team2Stats.gd += (match.team2_score - match.team1_score);
-  });
-
-  return Array.from(standings.values())
-    .sort((a, b) => {
-      if (b.points !== a.points) return b.points - a.points;
-      if (b.gd !== a.gd) return b.gd - a.gd;
-      return b.wins - a.wins;
-    });
 }
 
 export async function getTournamentSchedule(tournamentId: string) {

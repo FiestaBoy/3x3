@@ -84,7 +84,7 @@ export function Form() {
   ];
 
   return (
-    <div className="w-70">
+    <>
       <input
         type="checkbox"
         id="success-modal"
@@ -93,44 +93,51 @@ export function Form() {
         readOnly
       />
       <div className="modal">
-        <div className="modal-box">
-          <h3 className="font-bold text-lg">Success!</h3>
-          <p className="py-4">Your account has been created.</p>
+        <div className="modal-box shadow-2xl border border-success/20">
+          <h3 className="font-bold text-2xl text-success mb-2">Success!</h3>
+          <p className="py-4 text-base-content/80">Your account has been created successfully. Welcome to 3x3!</p>
           <div className="modal-action">
-            <button className="btn" onClick={() => router.push("/auth/login")}>
+            <button className="btn btn-primary shadow-lg hover:shadow-xl transition-all" onClick={() => router.push("/auth/login")}>
               Go to Login
             </button>
           </div>
         </div>
       </div>
       <form
-        className="flex flex-col gap-4 w-full"
+        className="w-full space-y-4"
         onSubmit={handleSubmit(onSubmit)}
         noValidate
       >
         {formFields.map((field) => (
-          <div key={field.name} className="flex flex-col w-full gap-0.75 py-1">
+          <div key={field.name} className="w-full space-y-1">
             <input
               {...register(field.name)}
               type={field.type}
-              className={`input ${errors[field.name] && "input-error"} focus:input-primary`}
+              className={`input input-bordered w-full ${errors[field.name] && "input-error"} focus:input-primary transition-all hover:border-primary/50`}
               placeholder={field.placeholder}
             />
             {errors[field.name] && (
-              <span className="text-xs text-error">
+              <span className="text-xs text-error font-medium block text-left">
                 {errors[field.name]?.message}
               </span>
             )}
           </div>
         ))}
-        <Button
-          priority="link"
-          className="btn self-center"
+        <button
+          type="submit"
+          className="btn btn-primary w-full shadow-lg hover:shadow-xl transition-all mt-2"
           disabled={isSubmitting || Object.keys(errors).length > 0}
         >
-          Sign up
-        </Button>
+          {isSubmitting ? (
+            <>
+              <span className="loading loading-spinner loading-sm"></span>
+              Creating account...
+            </>
+          ) : (
+            "Create Account"
+          )}
+        </button>
       </form>
-    </div>
+    </>
   );
 }

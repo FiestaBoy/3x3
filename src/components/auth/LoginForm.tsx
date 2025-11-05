@@ -51,20 +51,20 @@ export default function Form() {
 
   return (
     <form
-      className="flex flex-col gap-4 w-full"
+      className="w-full space-y-4"
       onSubmit={handleSubmit(onSubmit)}
       noValidate
     >
       {formFields.map((field) => (
-        <div key={field.name} className="flex flex-col w-full gap-0.75">
+        <div key={field.name} className="w-full space-y-1">
           <input
             {...register(field.name)}
             type={field.type}
-            className={`input ${errors[field.name] && "input-error"} focus:input-primary`}
+            className={`input input-bordered w-full ${errors[field.name] && "input-error"} focus:input-primary transition-all hover:border-primary/50`}
             placeholder={field.placeholder}
           />
           {errors[field.name] && (
-            <span className="text-xs text-error">
+            <span className="text-xs text-error font-medium block text-left">
               {errors[field.name]?.message}
             </span>
           )}
@@ -73,16 +73,24 @@ export default function Form() {
 
       <button
         type="submit"
-        className="btn self-center"
+        className="btn btn-primary w-full shadow-lg hover:shadow-xl transition-all mt-2"
         disabled={isSubmitting || Object.keys(errors).length > 0}
       >
-        {isSubmitting ? "Submitting..." : "Login"}
+        {isSubmitting ? (
+          <>
+            <span className="loading loading-spinner loading-sm"></span>
+            Signing in...
+          </>
+        ) : (
+          "Sign In"
+        )}
       </button>
+      
       {rootMessage && (
-        <div className="alert alert-error">
+        <div className="alert alert-error shadow-lg">
           <span>{rootMessage}</span>
           <button
-            className="btn btn-sm btn-ghost ml-2"
+            className="btn btn-sm btn-ghost hover:bg-error/20"
             onClick={() => setRootMessage(null)}
           >
             ✕

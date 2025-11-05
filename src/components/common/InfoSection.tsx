@@ -12,14 +12,14 @@ export default function InfoSection({
   subtitle,
   children,
   className = "py-12 md:py-16",
-  titleClassName = "text-3xl md:text-4xl font-bold text-center mb-4",
+  titleClassName = "text-3xl md:text-4xl font-bold text-center mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent",
   contentClassName = "max-w-4xl mx-auto flex justify-center",
 }: InfoSectionProps) {
   return (
-    <section className={className}>
+    <section className={`${className} px-4`}>
       <h2 className={titleClassName}>{title}</h2>
       {subtitle && (
-        <p className="text-lg md:text-xl text-center text-base-content/70 mb-8 md:mb-12">
+        <p className="text-lg md:text-xl text-center text-base-content/70 mb-8 md:mb-12 max-w-2xl mx-auto">
           {subtitle}
         </p>
       )}

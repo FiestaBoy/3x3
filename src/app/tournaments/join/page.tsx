@@ -1,6 +1,7 @@
 import JoinTournamentForm from "@/src/components/tournaments/JoinTournamentForm";
 import { getCaptainTeamNames, getUserSession } from "@/src/lib/db/helpers";
 import { joinTournament } from "@/src/lib/db/joinTournament";
+import { Trophy, Lock } from "lucide-react";
 
 import { redirect } from "next/navigation";
 
@@ -26,17 +27,26 @@ export default async function Page() {
   }
 
   return (
-    <div className="min-h-screen bg-base-200 flex items-center">
-      <div className="w-full max-w-2xl mx-auto p-6">
-        <div className="card bg-base-100 shadow-xl">
-          <div className="card-body">
-            <div className="text-center mb-4">
-              <h1 className="text-3xl md:text-4xl font-bold">Private Tournament Registration</h1>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-base-200 via-base-300 to-base-200 flex items-center justify-center py-12 px-4">
+      <div className="w-full max-w-2xl space-y-8">
+        <div className="text-center">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Lock className="h-10 w-10 text-primary" />
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              Join Private Tournament
+            </h1>
+          </div>
+          <p className="text-lg text-base-content/70">
+            Enter your join code to register your team
+          </p>
+        </div>
 
-            <div className="w-full">
-              <JoinTournamentForm teams={teams} joinAction={handleJoin} />
+        <div className="card bg-base-100 shadow-2xl border border-base-300 hover:shadow-3xl transition-all">
+          <div className="card-body">
+            <div className="bg-primary/10 p-4 rounded-full w-fit mx-auto mb-4">
+              <Trophy className="h-8 w-8 text-primary" />
             </div>
+            <JoinTournamentForm teams={teams} joinAction={handleJoin} />
           </div>
         </div>
       </div>

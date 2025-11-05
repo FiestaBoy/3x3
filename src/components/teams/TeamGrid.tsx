@@ -19,16 +19,23 @@ export default async function TeamGrid() {
           />
         ))
       ) : (
-        <p>
-          No teams found,{" "}
-          <Link href={"/teams/join"} className="text-primary">
-            join one
-          </Link>{" "}
-          or{" "}
-          <Link href={"/teams/create"} className="text-primary">
-            create one
-          </Link>
-        </p>
+        <div className="col-span-full">
+          <div className="card bg-base-100 shadow-xl border border-base-300 p-8 text-center">
+            <div className="space-y-4">
+              <p className="text-lg text-base-content/70">
+                No teams found. Get started by creating or joining a team!
+              </p>
+              <div className="flex gap-3 justify-center">
+                <Link href={"/teams/create"} className="btn btn-primary gap-2 shadow-lg hover:shadow-xl transition-all">
+                  Create Team
+                </Link>
+                <Link href={"/teams/join"} className="btn btn-outline btn-secondary gap-2 hover:shadow-lg transition-all">
+                  Join Team
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

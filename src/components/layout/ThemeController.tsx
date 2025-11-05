@@ -24,15 +24,18 @@ export default function ThemeController() {
   };
 
   return (
-    <div>
-      <label className="swap swap-rotate">
-        <input type="checkbox" onChange={toggleTheme} />
+    <button
+      onClick={toggleTheme}
+      className="btn btn-ghost btn-circle hover:bg-base-200 transition-all group"
+      aria-label="Toggle theme"
+    >
+      <div className="relative w-5 h-5">
         {theme === "business" ? (
-          <Sun className="w-5 h-5" />
+          <Sun className="w-5 h-5 text-warning group-hover:scale-110 transition-transform" />
         ) : (
-          <Moon className="w-5 h-5" />
+          <Moon className="w-5 h-5 text-info group-hover:scale-110 transition-transform" />
         )}
-      </label>
-    </div>
+      </div>
+    </button>
   );
 }

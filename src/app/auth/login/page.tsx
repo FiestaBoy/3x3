@@ -1,21 +1,29 @@
 import Form from "../../../components/auth/LoginForm";
+import { Trophy } from "lucide-react";
 
 export default function page() {
   return (
-    <div className="hero min-h-screen bg-base-200">
-      <div className="hero-content flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-base-200 via-base-300 to-base-200 flex items-center justify-center py-12 px-4">
+      <div className="w-full max-w-md space-y-8">
         <div className="text-center">
-          <h1 className="text-5xl font-bold">Login to 3x3</h1>
-          <p className="py-6">Welcome back!</p>
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Trophy className="h-12 w-12 text-primary" />
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              Welcome Back
+            </h1>
+          </div>
+          <p className="text-lg text-base-content/70">
+            Sign in to manage your tournaments and teams
+          </p>
         </div>
-        <div className="card shrink-0 w-full max-w-sm shadow-2xl bg-base-100">
+        <div className="card w-full shadow-2xl bg-base-100 border border-base-300 hover:shadow-3xl transition-all">
           <div className="card-body">
-            <div className="justify-center items-center flex flex-col">
-              <h1 className="font-bold text-2xl mb-3">
-                Enter your credentials
-              </h1>
-              <Form />
+            <div className="text-center mb-6">
+              <h2 className="font-bold text-2xl">
+                Login to Your Account
+              </h2>
             </div>
+            <Form />
           </div>
         </div>
       </div>

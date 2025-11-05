@@ -58,33 +58,34 @@ export default function JoinTournamentForm({ teams, joinAction }: Props) {
     <form
       noValidate
       onSubmit={handleSubmit(onSubmit)}
-      className="flex flex-col gap-4 w-full"
+      className="flex flex-col gap-6 w-full"
     >
       <div className="form-control w-full">
         <label className="label">
-          <span className="label-text font-semibold pb-0.75">Tournament Join Code</span>
+          <span className="label-text font-semibold text-base">Tournament Join Code</span>
         </label>
 
         <input
           {...register("joinCode")}
           aria-label="Tournament Join Code"
-          className={`input input-bordered w-full ${errors["joinCode"] ? "input-error" : ""} focus:input-primary`}
+          className={`input input-bordered w-full ${errors["joinCode"] ? "input-error" : ""} focus:input-primary transition-all hover:border-primary/50`}
           type="text"
+          placeholder="Enter 6-character code"
         />
 
         {errors["joinCode"] && (
-          <span className="text-xs text-error mt-1">{errors["joinCode"].message}</span>
+          <span className="text-xs text-error mt-1 font-medium">{errors["joinCode"].message}</span>
         )}
       </div>
 
       <div className="form-control w-full">
         <label className="label">
-          <span className="label-text font-semibold pb-0.75">Select Team</span>
+          <span className="label-text font-semibold text-base">Select Team</span>
         </label>
 
         <select
           {...register("teamId")}
-          className={`input input-bordered w-full ${errors["teamId"] ? "input-error" : ""} focus:input-primary`}
+          className={`select select-bordered w-full ${errors["teamId"] ? "input-error" : ""} focus:input-primary transition-all hover:border-primary/50`}
           defaultValue=""
         >
           <option value="" disabled>
@@ -98,19 +99,30 @@ export default function JoinTournamentForm({ teams, joinAction }: Props) {
         </select>
 
         {errors["teamId"] && (
-          <span className="text-xs text-error mt-1">{errors["teamId"].message}</span>
+          <span className="text-xs text-error mt-1 font-medium">{errors["teamId"].message}</span>
         )}
       </div>
 
-      <div className="flex justify-center">
-        <button
-          type="submit"
-          className="btn btn-primary w-full max-w-xs"
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? "Registering…" : "Register Team"}
-        </button>
-      </div>
+      <button
+        type="submit"
+        className="btn btn-primary w-full shadow-lg hover:shadow-xl transition-all"
+        disabled={isSubmitting || teams.length === 0}
+      >
+        {isSubmitting ? (
+          <>
+            <span className="loading loading-spinner loading-sm"></span>
+            Registering...
+          </>
+        ) : (
+          "Register Team"
+        )}
+      </button>
+      
+      {teams.length === 0 && (
+        <div className="alert alert-warning shadow-lg">
+          <span>You need to create a team first before joining tournaments.</span>
+        </div>
+      )}
     </form>
   );
 }

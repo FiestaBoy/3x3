@@ -61,24 +61,24 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
 
   return (
     <>
-      <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-shadow">
-        <div className="card-body">
-          <div className="flex justify-between items-start mb-2">
+      <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-200 border border-base-300 hover:border-primary/50">
+        <div className="card-body gap-3">
+          <div className="flex justify-between items-start">
             <h2 className="card-title text-xl">{tournament.name}</h2>
             {getStatusBadge()}
           </div>
 
           {tournament.description && (
-            <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+            <p className="text-sm text-base-content/70 line-clamp-2">
               {tournament.description}
             </p>
           )}
 
           <div className="space-y-2 text-sm">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 text-base-content/80">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
+                className="h-4 w-4 text-primary flex-shrink-0"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -90,16 +90,16 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
                   d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                 />
               </svg>
-              <span>
+              <span className="break-words">
                 {formatDate(tournament.start_date)} -{" "}
                 {formatDate(tournament.end_date)}
               </span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 text-base-content/80">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
+                className="h-4 w-4 text-primary flex-shrink-0"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -117,13 +117,13 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
                   d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
                 />
               </svg>
-              <span>{tournament.location}</span>
+              <span className="truncate">{tournament.location}</span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 text-base-content/80">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
+                className="h-4 w-4 text-primary flex-shrink-0"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -135,29 +135,27 @@ export default function TournamentCard({ tournament }: TournamentCardProps) {
                   d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
                 />
               </svg>
-              <span>{tournament.age_group}</span>
+              <span>{tournament.age_group} • <strong>{tournament.registered_teams || 0}</strong>/{tournament.max_teams} teams</span>
             </div>
           </div>
 
-          <div className="divider my-2"></div>
+          <div className="divider my-0"></div>
 
-          <div className="flex justify-between items-center text-xs">
-            <span className="badge badge-outline">
+          <div className="flex justify-between items-center">
+            <span className="badge badge-outline badge-lg">
               {formatTournamentFormat(tournament.format)}
             </span>
-            <span className="text-muted-foreground">
-              {tournament.registered_teams || 0}/{tournament.max_teams} teams
-            </span>
           </div>
 
-          <div className="card-actions justify-end mt-4">
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="btn btn-primary btn-block btn-sm"
-            >
-              View Details
-            </button>
-          </div>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="btn btn-primary w-full shadow-lg hover:shadow-xl transition-all gap-2 mt-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            View Details
+          </button>
         </div>
       </div>
 

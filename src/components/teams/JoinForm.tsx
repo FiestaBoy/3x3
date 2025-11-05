@@ -40,27 +40,34 @@ export default function JoinForm() {
     <form
       noValidate
       onSubmit={handleSubmit(onSubmit)}
-      className="flex flex-col gap-4 w-full"
+      className="flex flex-col gap-5 w-full"
     >
-      <div>
+      <div className="flex flex-col gap-1">
         <input
           {...register("joinCode")}
-          className={`input ${errors["joinCode"] && "input-error"} focus:input-primary`}
+          className={`input input-bordered ${errors["joinCode"] && "input-error"} focus:input-primary transition-all hover:border-primary/50`}
           type="text"
-          placeholder="Join Code"
+          placeholder="Enter team join code"
         />
         {errors["joinCode"] && (
-          <span className="text-xs text-error">
+          <span className="text-xs text-error font-medium">
             {errors["joinCode"].message}
           </span>
         )}
       </div>
       <button
         type="submit"
-        className="btn self-center"
+        className="btn btn-primary w-full shadow-lg hover:shadow-xl transition-all"
         disabled={isSubmitting || Object.keys(errors).length > 0}
       >
-        {isSubmitting ? "Submitting..." : "Join"}
+        {isSubmitting ? (
+          <>
+            <span className="loading loading-spinner loading-sm"></span>
+            Joining...
+          </>
+        ) : (
+          "Join Team"
+        )}
       </button>
     </form>
   );
