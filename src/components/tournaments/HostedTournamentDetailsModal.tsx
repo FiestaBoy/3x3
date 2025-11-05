@@ -27,7 +27,7 @@ import { getTournamentTeams, regenerateTournamentJoinCode, deleteTournament, upd
 import ScheduleMatchesModal from "./ScheduleMatchesModal";
 import BracketVisualization from "./BracketVisualization";
 import MatchManagement from "./MatchManagement";
-import { getTournamentSchedule } from "@/src/lib/db/matchScheduler";
+import { getTournamentSchedule } from "@/src/lib/db/tournamentScheduler";
 import StandingsDisplay from "./StandingsDisplay";
 import { getTournamentStandings } from "@/src/lib/db/tournamentActions";
 

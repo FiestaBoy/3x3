@@ -27,10 +27,7 @@ const db = require("@/src/lib/db/db");
 export interface ScheduleGenerationParams {
   tournamentId: string;
   numberOfCourts: number;
-  gameDurationMinutes: number;
   breakDurationMinutes: number;
-  tournamentStartDate: string;
-  numberOfDays: number;
   dailyStartTime: string; // "HH:MM"
   dailyEndTime: string; // "HH:MM"
 }
@@ -112,20 +109,31 @@ export async function generateTournamentSchedule(
 
     console.log(`Found ${teams.length} registered teams`);
 
-    // Step 5: Create scheduler configuration
+    // Step 5: Calculate tournament duration from start_date and end_date
+    const startDate = new Date(tournament.start_date);
+    const endDate = new Date(tournament.end_date);
+    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+    const numberOfDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    // Format start date as ISO string with time
+    const startDateTime = new Date(startDate);
+    const [startHour, startMinute] = params.dailyStartTime.split(':').map(Number);
+    startDateTime.setHours(startHour, startMinute, 0, 0);
+
+    // Step 6: Create scheduler configuration using tournament data
     const scheduleConfig: ScheduleConfig = {
       numberOfCourts: params.numberOfCourts,
-      gameDurationMinutes: params.gameDurationMinutes,
+      gameDurationMinutes: tournament.game_duration || 15, // Use tournament's game_duration
       breakDurationMinutes: params.breakDurationMinutes,
-      tournamentStartDate: params.tournamentStartDate,
-      numberOfDays: params.numberOfDays,
+      tournamentStartDate: startDateTime.toISOString(),
+      numberOfDays: numberOfDays,
       dailyStartTime: params.dailyStartTime,
       dailyEndTime: params.dailyEndTime,
     };
 
     const scheduler = new TimeScheduler(scheduleConfig);
 
-    // Step 6: Validate configuration
+    // Step 7: Validate configuration
     const validation = scheduler.validateConfiguration();
     if (!validation.valid) {
       return {
@@ -134,7 +142,7 @@ export async function generateTournamentSchedule(
       };
     }
 
-    // Step 7: Generate bracket based on tournament format
+    // Step 8: Generate bracket based on tournament format
     let bracketMatches;
     
     switch (tournament.format) {
@@ -156,7 +164,7 @@ export async function generateTournamentSchedule(
 
     console.log(`Generated ${bracketMatches.length} matches for bracket`);
 
-    // Step 8: Check if tournament duration is sufficient
+    // Step 9: Check if tournament duration is sufficient
     const estimation = scheduler.estimateTournamentDuration(bracketMatches.length);
     if (estimation.warning) {
       return {
@@ -165,12 +173,12 @@ export async function generateTournamentSchedule(
       };
     }
 
-    // Step 9: Schedule matches with times and courts
+    // Step 10: Schedule matches with times and courts
     const scheduledMatches = scheduler.scheduleMatches(bracketMatches);
     
     console.log(`Scheduled ${scheduledMatches.length} matches`);
 
-    // Step 10: Save to database with proper binary tree structure
+    // Step 11: Save to database with proper binary tree structure
     await saveScheduleToDatabase(params.tournamentId, scheduledMatches);
 
     return {

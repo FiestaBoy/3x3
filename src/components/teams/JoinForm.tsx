@@ -40,9 +40,9 @@ export default function JoinForm() {
     <form
       noValidate
       onSubmit={handleSubmit(onSubmit)}
-      className="flex flex-col gap-5 w-full"
+      className="flex flex-col gap-5"
     >
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col w-full items-center justify-center gap-1">
         <input
           {...register("joinCode")}
           className={`input input-bordered ${errors["joinCode"] && "input-error"} focus:input-primary transition-all hover:border-primary/50`}

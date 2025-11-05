@@ -195,7 +195,7 @@ export default function LandingPage({ session }: SessionProps) {
               </div>
               <h3 className="card-title">Match Management</h3>
               <p className="text-base-content/70">
-                Enter scores, record results, handle forfeits. Winner progression is automatic with binary tree logic.
+                Enter scores, record results, handle forfeits. Winner progression is automatic.
               </p>
               <div className="flex gap-2 flex-wrap mt-2">
                 <div className="badge badge-sm">Score Entry</div>
@@ -212,11 +212,10 @@ export default function LandingPage({ session }: SessionProps) {
               </div>
               <h3 className="card-title">Bracket Visualization</h3>
               <p className="text-base-content/70">
-                Beautiful bracket views with match results, team progression, and tournament flow. Mobile-responsive design.
+                Beautiful bracket views with match results, team progression, and tournament flow.
               </p>
               <div className="flex gap-2 flex-wrap mt-2">
                 <div className="badge badge-sm">Visual Brackets</div>
-                <div className="badge badge-sm">Mobile Friendly</div>
               </div>
             </div>
           </div>
@@ -306,16 +305,6 @@ export default function LandingPage({ session }: SessionProps) {
                   <p className="text-base-content/70">Remove teams, track registrations, and manage participants effortlessly</p>
                 </div>
               </div>
-
-              <div className="flex gap-4">
-                <div className="bg-success/10 w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <CheckCircle size={20} className="text-success" />
-                </div>
-                <div>
-                  <h4 className="font-semibold mb-1">Mobile Friendly</h4>
-                  <p className="text-base-content/70">Manage tournaments on-the-go with responsive mobile design</p>
-                </div>
-              </div>
             </div>
           </div>
 
@@ -383,11 +372,6 @@ export default function LandingPage({ session }: SessionProps) {
                 <button className="btn btn-lg bg-base-100 text-primary hover:bg-base-200 gap-2">
                   <Trophy size={20} />
                   Get Started Free
-                </button>
-              </Link>
-              <Link href="/tournaments">
-                <button className="btn btn-lg btn-outline text-primary-content hover:bg-primary-content hover:text-primary gap-2">
-                  View Demo
                 </button>
               </Link>
             </div>

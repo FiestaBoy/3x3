@@ -19,21 +19,18 @@ export default function ScheduleMatchesModal({
   tournament,
   onScheduleGenerated,
 }: ScheduleMatchesModalProps) {
-  // Get default start date/time from tournament
-  const getDefaultDateTime = () => {
-    const tournamentDate = new Date(tournament.start_date);
-    const year = tournamentDate.getFullYear();
-    const month = String(tournamentDate.getMonth() + 1).padStart(2, "0");
-    const day = String(tournamentDate.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}T09:00`;
+  // Calculate number of days from tournament start/end dates
+  const getNumberOfDays = () => {
+    const start = new Date(tournament.start_date);
+    const end = new Date(tournament.end_date);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    return diffDays;
   };
 
   const [formData, setFormData] = useState({
     numberOfCourts: 2,
-    gameDurationMinutes: 15,
     breakDurationMinutes: 5,
-    tournamentStartDate: getDefaultDateTime(),
-    numberOfDays: 1,
     dailyStartTime: "09:00",
     dailyEndTime: "18:00",
   });
@@ -66,27 +63,10 @@ export default function ScheduleMatchesModal({
         return;
       }
 
-      // Validate start date
-      const startDate = new Date(formData.tournamentStartDate);
-      const now = new Date();
-      now.setHours(0, 0, 0, 0);
-      
-      if (startDate < now) {
-        setResult({
-          type: "error",
-          message: "Tournament start date cannot be in the past",
-        });
-        setIsGenerating(false);
-        return;
-      }
-
       const response = await generateTournamentSchedule({
         tournamentId,
         numberOfCourts: formData.numberOfCourts,
-        gameDurationMinutes: formData.gameDurationMinutes,
         breakDurationMinutes: formData.breakDurationMinutes,
-        tournamentStartDate: formData.tournamentStartDate,
-        numberOfDays: formData.numberOfDays,
         dailyStartTime: formData.dailyStartTime,
         dailyEndTime: formData.dailyEndTime,
       });
@@ -165,38 +145,18 @@ export default function ScheduleMatchesModal({
         <div className="alert mb-6">
           <Info size={20} />
           <div className="text-sm">
-            Configure the scheduling parameters below. The system will automatically assign
-            match times and courts based on your settings.
+            <div className="font-semibold mb-2">Tournament Information</div>
+            <div className="space-y-1 text-xs opacity-80">
+              <div>• Start Date: {new Date(tournament.start_date).toLocaleDateString()}</div>
+              <div>• End Date: {new Date(tournament.end_date).toLocaleDateString()}</div>
+              <div>• Duration: {getNumberOfDays()} day(s)</div>
+              <div>• Game Duration: {tournament.game_duration} minutes</div>
+            </div>
           </div>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Start Date & Time Box */}
-          <div className="card bg-base-200">
-            <div className="card-body p-4">
-              <h4 className="font-semibold mb-3 flex items-center gap-2">
-                <Calendar size={16} />
-                Tournament Start
-              </h4>
-
-              <div className="form-control flex flex-col">
-                <label className="label">
-                  <span className="label-text">Start Date & Time</span>
-                </label>
-                <input
-                  type="datetime-local"
-                  className="input input-bordered input-sm"
-                  value={formData.tournamentStartDate}
-                  onChange={(e) => handleInputChange("tournamentStartDate", e.target.value)}
-                  required
-                />
-                <label className="label">
-                  <span className="label-text-alt">When should the first match begin?</span>
-                </label>
-              </div>
-            </div>
-          </div>
 
           {/* Court & Venue Settings */}
           <div className="card bg-base-200">
@@ -230,56 +190,36 @@ export default function ScheduleMatchesModal({
             </div>
           </div>
 
-          {/* Game Timing */}
+          {/* Break Time */}
           <div className="card bg-base-200">
             <div className="card-body p-4">
               <h4 className="font-semibold mb-3 flex items-center gap-2">
                 <Clock size={16} />
-                Game Timing
+                Break Between Matches
               </h4>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text">Game Duration</span>
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min="10"
-                      max="60"
-                      step="5"
-                      className="input input-bordered input-sm flex-1"
-                      value={formData.gameDurationMinutes}
-                      onChange={(e) =>
-                        handleInputChange("gameDurationMinutes", parseInt(e.target.value))
-                      }
-                      required
-                    />
-                    <span className="text-sm">min</span>
-                  </div>
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Break Duration</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max="30"
+                    step="5"
+                    className="input input-bordered input-sm flex-1"
+                    value={formData.breakDurationMinutes}
+                    onChange={(e) =>
+                      handleInputChange("breakDurationMinutes", parseInt(e.target.value))
+                    }
+                    required
+                  />
+                  <span className="text-sm">minutes</span>
                 </div>
-
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text">Break Time</span>
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min="0"
-                      max="30"
-                      step="5"
-                      className="input input-bordered input-sm flex-1"
-                      value={formData.breakDurationMinutes}
-                      onChange={(e) =>
-                        handleInputChange("breakDurationMinutes", parseInt(e.target.value))
-                      }
-                      required
-                    />
-                    <span className="text-sm">min</span>
-                  </div>
-                </div>
+                <label className="label">
+                  <span className="label-text-alt">Time buffer between games on the same court</span>
+                </label>
               </div>
             </div>
           </div>
@@ -289,30 +229,13 @@ export default function ScheduleMatchesModal({
             <div className="card-body p-4">
               <h4 className="font-semibold mb-3 flex items-center gap-2">
                 <Calendar size={16} />
-                Daily Schedule
+                Daily Operating Hours
               </h4>
-
-              <div className="form-control mb-4 flex flex-col">
-                <label className="label">
-                  <span className="label-text">Tournament Days</span>
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="14"
-                  className="input input-bordered input-sm"
-                  value={formData.numberOfDays}
-                  onChange={(e) =>
-                    handleInputChange("numberOfDays", parseInt(e.target.value))
-                  }
-                  required
-                />
-              </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="form-control">
                   <label className="label">
-                    <span className="label-text">Daily Start</span>
+                    <span className="label-text">Start Time</span>
                   </label>
                   <input
                     type="time"
@@ -325,7 +248,7 @@ export default function ScheduleMatchesModal({
 
                 <div className="form-control">
                   <label className="label">
-                    <span className="label-text">Daily End</span>
+                    <span className="label-text">End Time</span>
                   </label>
                   <input
                     type="time"
@@ -336,6 +259,9 @@ export default function ScheduleMatchesModal({
                   />
                 </div>
               </div>
+              <label className="label">
+                <span className="label-text-alt">When the venue is available each day</span>
+              </label>
             </div>
           </div>
 

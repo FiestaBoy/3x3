@@ -52,11 +52,11 @@ export default function RegisterForm() {
   return (
     <>
       <form
-        className="flex flex-col gap-5 w-full"
+        className="flex flex-col gap-5"
         noValidate
         onSubmit={handleSubmit(onSubmit)}
       >
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col w-full items-center justify-center gap-1">
           <input
             {...register("name")}
             type="text"
@@ -69,7 +69,7 @@ export default function RegisterForm() {
             </span>
           )}
         </div>
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col w-full items-center justify-center gap-1">
           <select
             {...register("ageGroup")}
             className={`select select-bordered ${errors["ageGroup"] && "input-error"} focus:input-primary transition-all hover:border-primary/50`}

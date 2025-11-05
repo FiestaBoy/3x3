@@ -291,14 +291,6 @@ export class TimeScheduler {
       };
     }
 
-    // Validate tournament start date is not in the past
-    if (this.tournamentStartDate < new Date()) {
-      return {
-        valid: false,
-        message: 'Tournament start date cannot be in the past.'
-      };
-    }
-
     return { valid: true };
   }
 

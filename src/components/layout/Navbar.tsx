@@ -53,12 +53,6 @@ export default function Navbar({ session }: NavbarProps) {
           <div className="flex items-center gap-2">
             <ThemeController />
             <Link
-              href="/tournaments"
-              className="btn btn-ghost btn-circle hover:bg-base-200 transition-all"
-            >
-              <Search className="h-5 w-5" />
-            </Link>
-            <Link
               href="/auth/login"
               className="btn btn-ghost text-base hover:bg-primary hover:text-primary-content transition-all"
             >
