@@ -1,6 +1,6 @@
 "use client";
 
-import { createUser } from "@/src/lib/db/createUser";
+import { createUser } from "@/src/lib/db/auth/createUser";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -95,9 +95,14 @@ export function Form() {
       <div className="modal">
         <div className="modal-box shadow-2xl border border-success/20">
           <h3 className="font-bold text-2xl text-success mb-2">Success!</h3>
-          <p className="py-4 text-base-content/80">Your account has been created successfully. Welcome to 3x3!</p>
+          <p className="py-4 text-base-content/80">
+            Your account has been created successfully. Welcome to 3x3!
+          </p>
           <div className="modal-action">
-            <button className="btn btn-primary shadow-lg hover:shadow-xl transition-all" onClick={() => router.push("/auth/login")}>
+            <button
+              className="btn btn-primary shadow-lg hover:shadow-xl transition-all"
+              onClick={() => router.push("/auth/login")}
+            >
               Go to Login
             </button>
           </div>

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { updateUserProfile } from "@/src/lib/db/userSettings";
+import { updateUserProfile } from "@/src/lib/db/users/userSettings";
 import { CheckCircle } from "lucide-react";
 
 const schema = z.object({
@@ -26,7 +26,7 @@ const schema = z.object({
     },
     {
       message: "Invalid date",
-    }
+    },
   ),
   email: z.string().email({ message: "Invalid email address" }),
 });
@@ -87,7 +87,11 @@ export default function EditProfileForm({ user }: EditProfileFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="w-full space-y-4" noValidate>
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="w-full space-y-4"
+      noValidate
+    >
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="w-full space-y-1">
           <label className="label">

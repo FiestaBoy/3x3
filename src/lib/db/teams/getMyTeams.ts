@@ -1,6 +1,6 @@
 "use server";
 
-import { getUserSession } from "./helpers";
+import { getUserSession } from "../utils/helpers";
 
 const db = require("@/src/lib/db/db");
 
@@ -9,8 +9,6 @@ type TeamCardType = { success: true; teams: TeamInfo[] } | { success: false };
 export type TeamInfo = {
   ageGroup: string;
   joinCode: string;
-  //playerCount: number;
-  //captainName: string;
   name: string;
   role: "captain" | "player";
   teamId: number;

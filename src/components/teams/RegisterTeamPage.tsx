@@ -16,7 +16,7 @@ export default function RegisterTeamPage() {
             Name your squad and get ready to compete
           </p>
         </div>
-        
+
         <div className="card w-full shadow-2xl bg-base-100 border border-base-300 hover:shadow-3xl transition-all">
           <div className="card-body">
             <div className="flex flex-col items-center mb-6">

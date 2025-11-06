@@ -1,8 +1,8 @@
 // app/tournaments/create/page.tsx
 import CreateTournamentForm from "@/src/components/tournaments/CreateTournamentForm";
-import { getUserSession } from "@/src/lib/db/helpers";
+import { getUserSession } from "@/src/lib/db/utils/helpers";
 import { redirect } from "next/navigation";
-import { Trophy, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 export default async function CreateTournamentPage() {
   // Check if user is logged in and has organizer permissions
@@ -31,7 +31,7 @@ export default async function CreateTournamentPage() {
             Set up your basketball tournament with custom rules and schedules
           </p>
         </div>
-        
+
         <CreateTournamentForm />
       </div>
     </div>

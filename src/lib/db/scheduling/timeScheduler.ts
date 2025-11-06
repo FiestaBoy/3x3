@@ -1,7 +1,7 @@
 /**
  * Core Time Scheduling Engine for Tournament Management
  * Handles court assignment, time slot calculation, and collision prevention
- * 
+ *
  * Algorithm Complexity:
  * - scheduleMatches: O(m * c * d) where m = matches, c = courts, d = days
  * - findNextAvailableSlot: O(c) where c = number of courts
@@ -24,7 +24,7 @@ export interface MatchToSchedule {
   team2Id: number | null;
   roundNumber: number;
   gameNumber: number;
-  bracketType: 'winners' | 'losers' | 'finals';
+  bracketType: "winners" | "losers" | "finals";
   groupId?: number;
   parentMatchId?: number;
   childMatchId?: number;
@@ -59,7 +59,7 @@ export class TimeScheduler {
     this.tournamentStartDate = new Date(config.tournamentStartDate);
     this.daySchedules = this.generateDaySchedules();
     this.courtAvailability = new Map();
-    
+
     // Initialize all courts as available at tournament start
     for (let i = 1; i <= config.numberOfCourts; i++) {
       this.courtAvailability.set(i, this.daySchedules[0].startTime);
@@ -71,7 +71,7 @@ export class TimeScheduler {
       courts: config.numberOfCourts,
       dailyWindow: `${config.dailyStartTime} - ${config.dailyEndTime}`,
       gameDuration: config.gameDurationMinutes,
-      breakDuration: config.breakDurationMinutes
+      breakDuration: config.breakDurationMinutes,
     });
   }
 
@@ -88,8 +88,12 @@ export class TimeScheduler {
       currentDate.setDate(currentDate.getDate() + day);
 
       // Parse daily start and end times
-      const [startHour, startMinute] = this.config.dailyStartTime.split(':').map(Number);
-      const [endHour, endMinute] = this.config.dailyEndTime.split(':').map(Number);
+      const [startHour, startMinute] = this.config.dailyStartTime
+        .split(":")
+        .map(Number);
+      const [endHour, endMinute] = this.config.dailyEndTime
+        .split(":")
+        .map(Number);
 
       // Create start time for this day
       const dayStart = new Date(currentDate);
@@ -109,7 +113,7 @@ export class TimeScheduler {
       console.log(`Day ${day + 1} schedule:`, {
         date: currentDate.toDateString(),
         start: dayStart.toISOString(),
-        end: dayEnd.toISOString()
+        end: dayEnd.toISOString(),
       });
     }
 
@@ -122,7 +126,7 @@ export class TimeScheduler {
    *   m = number of matches
    *   c = number of courts
    *   d = number of days
-   * 
+   *
    * Strategy: Greedy algorithm that assigns each match to the earliest
    * available court that doesn't conflict with team schedules
    */
@@ -134,9 +138,14 @@ export class TimeScheduler {
 
     for (const match of matches) {
       // Handle matches with TBD teams (byes or pending)
-      const team1Available = (match.team1Id && teamNextAvailable.get(match.team1Id)) || this.daySchedules[0].startTime;
-      const team2Available = (match.team2Id && teamNextAvailable.get(match.team2Id)) || this.daySchedules[0].startTime;
-      const earliestTeamTime = team1Available > team2Available ? team1Available : team2Available;
+      const team1Available =
+        (match.team1Id && teamNextAvailable.get(match.team1Id)) ||
+        this.daySchedules[0].startTime;
+      const team2Available =
+        (match.team2Id && teamNextAvailable.get(match.team2Id)) ||
+        this.daySchedules[0].startTime;
+      const earliestTeamTime =
+        team1Available > team2Available ? team1Available : team2Available;
 
       // Find next available court slot that's after teams are available
       const slot = this.findNextAvailableSlot(earliestTeamTime);
@@ -144,15 +153,15 @@ export class TimeScheduler {
       if (!slot) {
         throw new Error(
           `Unable to schedule match ${match.gameNumber} in round ${match.roundNumber}. ` +
-          `Tournament duration insufficient. Consider adding more days or courts.`
+            `Tournament duration insufficient. Consider adding more days or courts.`,
         );
       }
 
       const matchEndTime = new Date(slot.scheduledTime);
       matchEndTime.setMinutes(
-        matchEndTime.getMinutes() + 
-        this.config.gameDurationMinutes + 
-        this.config.breakDurationMinutes
+        matchEndTime.getMinutes() +
+          this.config.gameDurationMinutes +
+          this.config.breakDurationMinutes,
       );
 
       // Schedule the match
@@ -163,7 +172,9 @@ export class TimeScheduler {
         estimatedEndTime: matchEndTime,
       });
 
-      console.log(`  ✅ Match ${match.gameNumber}: Court ${slot.courtNumber} at ${slot.scheduledTime.toISOString()}`);
+      console.log(
+        `  ✅ Match ${match.gameNumber}: Court ${slot.courtNumber} at ${slot.scheduledTime.toISOString()}`,
+      );
 
       // Update court availability (after game + break)
       this.courtAvailability.set(slot.courtNumber, matchEndTime);
@@ -177,7 +188,9 @@ export class TimeScheduler {
       }
     }
 
-    console.log(`✅ Successfully scheduled ${scheduledMatches.length} matches\n`);
+    console.log(
+      `✅ Successfully scheduled ${scheduledMatches.length} matches\n`,
+    );
 
     return scheduledMatches;
   }
@@ -185,14 +198,14 @@ export class TimeScheduler {
   /**
    * Find the next available court slot after a given time
    * Time Complexity: O(c * d) where c = courts, d = days
-   * 
+   *
    * Algorithm:
    * 1. Check all courts for earliest availability
    * 2. If no court available in current day window, move to next day
    * 3. Ensure match can complete within daily time window
    */
   private findNextAvailableSlot(
-    afterTime: Date
+    afterTime: Date,
   ): { scheduledTime: Date; courtNumber: number } | null {
     let searchTime = new Date(afterTime);
 
@@ -212,11 +225,16 @@ export class TimeScheduler {
       let earliestCourt: number | null = null;
       let earliestTime: Date | null = null;
 
-      for (let courtNum = 1; courtNum <= this.config.numberOfCourts; courtNum++) {
+      for (
+        let courtNum = 1;
+        courtNum <= this.config.numberOfCourts;
+        courtNum++
+      ) {
         const courtAvailable = this.courtAvailability.get(courtNum)!;
-        
+
         // Court available time on this day
-        let courtTime = courtAvailable > searchTime ? courtAvailable : searchTime;
+        let courtTime =
+          courtAvailable > searchTime ? courtAvailable : searchTime;
 
         // Ensure court time is within daily window
         if (courtTime < daySchedule.startTime) {
@@ -226,7 +244,7 @@ export class TimeScheduler {
         // Check if match can complete before day ends
         const matchEndTime = new Date(courtTime);
         matchEndTime.setMinutes(
-          matchEndTime.getMinutes() + this.config.gameDurationMinutes
+          matchEndTime.getMinutes() + this.config.gameDurationMinutes,
         );
 
         if (matchEndTime <= daySchedule.endTime) {
@@ -263,31 +281,38 @@ export class TimeScheduler {
    */
   public validateConfiguration(): { valid: boolean; message?: string } {
     // Check that daily time window is sufficient for at least one game
-    const [startHour, startMinute] = this.config.dailyStartTime.split(':').map(Number);
-    const [endHour, endMinute] = this.config.dailyEndTime.split(':').map(Number);
-    
-    const dailyMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
-    const minimumRequired = this.config.gameDurationMinutes + this.config.breakDurationMinutes;
+    const [startHour, startMinute] = this.config.dailyStartTime
+      .split(":")
+      .map(Number);
+    const [endHour, endMinute] = this.config.dailyEndTime
+      .split(":")
+      .map(Number);
+
+    const dailyMinutes =
+      endHour * 60 + endMinute - (startHour * 60 + startMinute);
+    const minimumRequired =
+      this.config.gameDurationMinutes + this.config.breakDurationMinutes;
 
     if (dailyMinutes < minimumRequired) {
       return {
         valid: false,
-        message: `Daily time window (${dailyMinutes} minutes) is insufficient for even one game ` +
-                 `(requires ${minimumRequired} minutes including break time).`
+        message:
+          `Daily time window (${dailyMinutes} minutes) is insufficient for even one game ` +
+          `(requires ${minimumRequired} minutes including break time).`,
       };
     }
 
     if (this.config.numberOfCourts < 1) {
       return {
         valid: false,
-        message: 'At least one court is required.'
+        message: "At least one court is required.",
       };
     }
 
     if (this.config.numberOfDays < 1) {
       return {
         valid: false,
-        message: 'Tournament must be at least one day long.'
+        message: "Tournament must be at least one day long.",
       };
     }
 
@@ -304,14 +329,20 @@ export class TimeScheduler {
     warning?: string;
   } {
     // Calculate total minutes needed
-    const minutesPerMatch = this.config.gameDurationMinutes + this.config.breakDurationMinutes;
+    const minutesPerMatch =
+      this.config.gameDurationMinutes + this.config.breakDurationMinutes;
     const totalMinutesNeeded = numberOfMatches * minutesPerMatch;
 
     // Calculate how many matches can fit per day across all courts
-    const [startHour, startMinute] = this.config.dailyStartTime.split(':').map(Number);
-    const [endHour, endMinute] = this.config.dailyEndTime.split(':').map(Number);
-    const dailyMinutes = (endHour * 60 + endMinute) - (startHour * 60 + startMinute);
-    
+    const [startHour, startMinute] = this.config.dailyStartTime
+      .split(":")
+      .map(Number);
+    const [endHour, endMinute] = this.config.dailyEndTime
+      .split(":")
+      .map(Number);
+    const dailyMinutes =
+      endHour * 60 + endMinute - (startHour * 60 + startMinute);
+
     const matchesPerCourtPerDay = Math.floor(dailyMinutes / minutesPerMatch);
     const matchesPerDay = matchesPerCourtPerDay * this.config.numberOfCourts;
 
@@ -320,18 +351,26 @@ export class TimeScheduler {
 
     // Find estimated end time
     let estimatedEndTime = new Date(this.daySchedules[0].startTime);
-    
+
     if (daysNeeded <= this.config.numberOfDays) {
       // Tournament fits within allocated days
-      const lastDay = this.daySchedules[Math.min(daysNeeded - 1, this.daySchedules.length - 1)];
+      const lastDay =
+        this.daySchedules[
+          Math.min(daysNeeded - 1, this.daySchedules.length - 1)
+        ];
       const remainingMatches = numberOfMatches % matchesPerDay || matchesPerDay;
-      const minutesOnLastDay = Math.ceil(remainingMatches / this.config.numberOfCourts) * minutesPerMatch;
-      
+      const minutesOnLastDay =
+        Math.ceil(remainingMatches / this.config.numberOfCourts) *
+        minutesPerMatch;
+
       estimatedEndTime = new Date(lastDay.startTime);
-      estimatedEndTime.setMinutes(estimatedEndTime.getMinutes() + minutesOnLastDay);
+      estimatedEndTime.setMinutes(
+        estimatedEndTime.getMinutes() + minutesOnLastDay,
+      );
     } else {
       // Tournament exceeds allocated days
-      estimatedEndTime = this.daySchedules[this.daySchedules.length - 1].endTime;
+      estimatedEndTime =
+        this.daySchedules[this.daySchedules.length - 1].endTime;
     }
 
     console.log(`📊 Tournament Duration Estimate:`, {
@@ -339,16 +378,17 @@ export class TimeScheduler {
       matchesPerDay,
       daysNeeded,
       daysAllocated: this.config.numberOfDays,
-      estimatedEnd: estimatedEndTime.toISOString()
+      estimatedEnd: estimatedEndTime.toISOString(),
     });
 
     return {
       estimatedEndTime,
       totalDaysUsed: Math.min(daysNeeded, this.config.numberOfDays),
-      warning: daysNeeded > this.config.numberOfDays
-        ? `Tournament requires ${daysNeeded} days but only ${this.config.numberOfDays} allocated. ` +
-          `Consider adding ${daysNeeded - this.config.numberOfDays} more day(s) or increasing courts.`
-        : undefined
+      warning:
+        daysNeeded > this.config.numberOfDays
+          ? `Tournament requires ${daysNeeded} days but only ${this.config.numberOfDays} allocated. ` +
+            `Consider adding ${daysNeeded - this.config.numberOfDays} more day(s) or increasing courts.`
+          : undefined,
     };
   }
 
@@ -358,7 +398,7 @@ export class TimeScheduler {
    */
   public getCourtAvailability(): CourtAvailability[] {
     const availability: CourtAvailability[] = [];
-    
+
     for (let courtNum = 1; courtNum <= this.config.numberOfCourts; courtNum++) {
       availability.push({
         courtNumber: courtNum,
@@ -366,8 +406,8 @@ export class TimeScheduler {
       });
     }
 
-    return availability.sort((a, b) => 
-      a.nextAvailableTime.getTime() - b.nextAvailableTime.getTime()
+    return availability.sort(
+      (a, b) => a.nextAvailableTime.getTime() - b.nextAvailableTime.getTime(),
     );
   }
 }

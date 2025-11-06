@@ -3,7 +3,7 @@
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SubmitHandler, useForm } from "react-hook-form";
-import { joinTeam } from "@/src/lib/db/joinTeam";
+import { joinTeam } from "@/src/lib/db/teams/joinTeam";
 import { useRouter } from "next/navigation";
 
 const schema = z.object({

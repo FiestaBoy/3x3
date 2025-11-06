@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { changePassword } from "@/src/lib/db/userSettings";
+import { changePassword } from "@/src/lib/db/users/userSettings";
 import { CheckCircle, Lock } from "lucide-react";
 
 const schema = z
@@ -64,7 +64,11 @@ export default function ChangePasswordForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="w-full space-y-4" noValidate>
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="w-full space-y-4"
+      noValidate
+    >
       <div className="alert alert-info shadow-lg mb-4">
         <Lock className="w-5 h-5" />
         <span className="text-sm">

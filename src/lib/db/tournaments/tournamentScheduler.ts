@@ -3,15 +3,15 @@
 /**
  * Tournament Scheduler Orchestrator
  * Coordinates bracket generation, time scheduling, and database operations
- * 
+ *
  * This is the main entry point for tournament schedule generation
  * Handles single elimination and round robin formats
- * 
+ *
  * Binary Tree Structure:
  * - Each match has ONE parent_match_id (the match it came from)
  * - Each match has ONE child_match_id (the match winner advances to)
  * - Position is determined by ORDER of completion
- * 
+ *
  * Time Complexity: O(n log n + m*c*d) where:
  *   n = number of teams
  *   m = number of matches
@@ -19,8 +19,16 @@
  *   d = number of days
  */
 
-import { TimeScheduler, ScheduleConfig, ScheduledMatch } from './scheduling/timeScheduler';
-import { generateSingleEliminationBracket, Team, calculateBracketStats } from './brackets/singleElimination';
+import {
+  TimeScheduler,
+  ScheduleConfig,
+  ScheduledMatch,
+} from "../scheduling/timeScheduler";
+import {
+  generateSingleEliminationBracket,
+  Team,
+  calculateBracketStats,
+} from "../brackets/singleElimination";
 
 const db = require("@/src/lib/db/db");
 
@@ -30,6 +38,7 @@ export interface ScheduleGenerationParams {
   breakDurationMinutes: number;
   dailyStartTime: string; // "HH:MM"
   dailyEndTime: string; // "HH:MM"
+  confirmRegenerate?: boolean;
 }
 
 export interface ScheduleGenerationResult {
@@ -38,6 +47,8 @@ export interface ScheduleGenerationResult {
   totalMatches?: number;
   estimatedEndTime?: string;
   daysUsed?: number;
+  requiresConfirmation?: boolean;
+  existingMatchCount?: number;
 }
 
 /**
@@ -46,14 +57,14 @@ export interface ScheduleGenerationResult {
  */
 function toMySQLDatetime(isoString: string): string {
   const date = new Date(isoString);
-  
+
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-  
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+
   return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
 }
 
@@ -62,44 +73,70 @@ function toMySQLDatetime(isoString: string): string {
  * Time Complexity: O(n log n + m*c*d)
  */
 export async function generateTournamentSchedule(
-  params: ScheduleGenerationParams
+  params: ScheduleGenerationParams,
 ): Promise<ScheduleGenerationResult> {
   try {
-    console.log('Starting tournament schedule generation:', params.tournamentId);
+    console.log(
+      "Starting tournament schedule generation:",
+      params.tournamentId,
+    );
 
     // Step 1: Fetch tournament details
     const tournament = await getTournamentDetails(params.tournamentId);
     if (!tournament) {
       return {
         success: false,
-        message: 'Tournament not found',
+        message: "Tournament not found",
       };
     }
 
     // Step 2: Validate tournament format
-    if (tournament.format !== 'single_elimination' && tournament.format !== 'round_robin') {
+    if (
+      tournament.format !== "single_elimination" &&
+      tournament.format !== "round_robin"
+    ) {
       return {
         success: false,
-        message: 'Only Single Elimination and Round Robin formats are supported',
+        message:
+          "Only Single Elimination and Round Robin formats are supported",
       };
     }
 
     // Step 3: Check if schedule already exists
     const existingMatches = await db.query(
       'SELECT COUNT(*) as count FROM tournament_games WHERE tournament_id = ? AND game_status != "cancelled"',
-      [params.tournamentId]
+      [params.tournamentId],
     );
 
     if (existingMatches[0].count > 0) {
-      return {
-        success: false,
-        message: 'Tournament schedule already exists. Delete existing schedule first.',
-      };
+      // If not confirmed, ask for confirmation
+      if (!params.confirmRegenerate) {
+        return {
+          success: false,
+          message: `Tournament already has ${existingMatches[0].count} scheduled matches.`,
+          requiresConfirmation: true,
+          existingMatchCount: existingMatches[0].count,
+        };
+      }
+
+      // User confirmed - delete existing schedule
+      console.log(`Deleting ${existingMatches[0].count} existing matches...`);
+      const deleteResult = await deleteTournamentSchedule(
+        params.tournamentId,
+        true,
+      );
+
+      if (!deleteResult.success) {
+        return {
+          success: false,
+          message: deleteResult.message,
+        };
+      }
     }
 
     // Step 4: Fetch registered teams
     const teams = await getRegisteredTeams(params.tournamentId);
-    
+
     if (teams.length < 4) {
       return {
         success: false,
@@ -117,7 +154,9 @@ export async function generateTournamentSchedule(
 
     // Format start date as ISO string with time
     const startDateTime = new Date(startDate);
-    const [startHour, startMinute] = params.dailyStartTime.split(':').map(Number);
+    const [startHour, startMinute] = params.dailyStartTime
+      .split(":")
+      .map(Number);
     startDateTime.setHours(startHour, startMinute, 0, 0);
 
     // Step 6: Create scheduler configuration using tournament data
@@ -138,23 +177,25 @@ export async function generateTournamentSchedule(
     if (!validation.valid) {
       return {
         success: false,
-        message: validation.message || 'Invalid schedule configuration',
+        message: validation.message || "Invalid schedule configuration",
       };
     }
 
     // Step 8: Generate bracket based on tournament format
     let bracketMatches;
-    
+
     switch (tournament.format) {
-      case 'single_elimination':
+      case "single_elimination":
         bracketMatches = generateSingleEliminationBracket(teams);
         break;
-      
-      case 'round_robin':
-        const { generateRoundRobinSchedule } = require('./brackets/roundRobin');
+
+      case "round_robin":
+        const {
+          generateRoundRobinSchedule,
+        } = require("../brackets/roundRobin");
         bracketMatches = generateRoundRobinSchedule(teams);
         break;
-      
+
       default:
         return {
           success: false,
@@ -165,7 +206,9 @@ export async function generateTournamentSchedule(
     console.log(`Generated ${bracketMatches.length} matches for bracket`);
 
     // Step 9: Check if tournament duration is sufficient
-    const estimation = scheduler.estimateTournamentDuration(bracketMatches.length);
+    const estimation = scheduler.estimateTournamentDuration(
+      bracketMatches.length,
+    );
     if (estimation.warning) {
       return {
         success: false,
@@ -175,7 +218,7 @@ export async function generateTournamentSchedule(
 
     // Step 10: Schedule matches with times and courts
     const scheduledMatches = scheduler.scheduleMatches(bracketMatches);
-    
+
     console.log(`Scheduled ${scheduledMatches.length} matches`);
 
     // Step 11: Save to database with proper binary tree structure
@@ -183,17 +226,17 @@ export async function generateTournamentSchedule(
 
     return {
       success: true,
-      message: 'Tournament schedule generated successfully!',
+      message: "Tournament schedule generated successfully!",
       totalMatches: scheduledMatches.length,
       estimatedEndTime: estimation.estimatedEndTime.toISOString(),
       daysUsed: estimation.totalDaysUsed,
     };
-
   } catch (error) {
-    console.error('Error generating tournament schedule:', error);
+    console.error("Error generating tournament schedule:", error);
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Failed to generate schedule',
+      message:
+        error instanceof Error ? error.message : "Failed to generate schedule",
     };
   }
 }
@@ -204,10 +247,10 @@ export async function generateTournamentSchedule(
  */
 async function getTournamentDetails(tournamentId: string): Promise<any | null> {
   const result = await db.query(
-    'SELECT * FROM tournaments WHERE tournament_id = ?',
-    [tournamentId]
+    "SELECT * FROM tournaments WHERE tournament_id = ?",
+    [tournamentId],
   );
-  
+
   return result && result.length > 0 ? result[0] : null;
 }
 
@@ -225,7 +268,7 @@ async function getRegisteredTeams(tournamentId: string): Promise<Team[]> {
     INNER JOIN team_tournament tt ON t.team_id = tt.team_id
     WHERE tt.tournament_id = ?
     ORDER BY tt.registered_at ASC`,
-    [tournamentId]
+    [tournamentId],
   );
 
   if (!result || result.length === 0) {
@@ -243,15 +286,15 @@ async function getRegisteredTeams(tournamentId: string): Promise<Team[]> {
   if (!result[0].seed_number) {
     // Shuffle teams for random seeding
     const shuffledTeams = [...teams].sort(() => Math.random() - 0.5);
-    
+
     for (let i = 0; i < shuffledTeams.length; i++) {
       await db.query(
-        'UPDATE team_tournament SET seed_number = ? WHERE tournament_id = ? AND team_id = ?',
-        [i + 1, tournamentId, shuffledTeams[i].teamId]
+        "UPDATE team_tournament SET seed_number = ? WHERE tournament_id = ? AND team_id = ?",
+        [i + 1, tournamentId, shuffledTeams[i].teamId],
       );
       shuffledTeams[i].seedNumber = i + 1;
     }
-    
+
     return shuffledTeams;
   }
 
@@ -261,28 +304,30 @@ async function getRegisteredTeams(tournamentId: string): Promise<Team[]> {
 /**
  * Save scheduled matches to database with binary tree structure
  * Time Complexity: O(m) where m = number of matches
- * 
+ *
  * Binary Tree Structure:
  * - First pass: Insert all matches and get their IDs
  * - Second pass: Update parent_match_id and child_match_id references using gameId mapping
  */
 async function saveScheduleToDatabase(
   tournamentId: string,
-  matches: ScheduledMatch[]
+  matches: ScheduledMatch[],
 ): Promise<void> {
-  console.log('\n=== SAVING SCHEDULE TO DATABASE ===\n');
-  
+  console.log("\n=== SAVING SCHEDULE TO DATABASE ===\n");
+
   // Map to store gameId (from bracket generator) to database game_id
   const gameIdToDbId = new Map<number, number>();
 
   // First pass: Insert all matches and build the mapping
-  console.log('📝 FIRST PASS: Inserting matches...\n');
-  
+  console.log("📝 FIRST PASS: Inserting matches...\n");
+
   for (const match of matches) {
-    const team1Id = match.team1Id === null || match.team1Id === -1 ? null : match.team1Id;
-    const team2Id = match.team2Id === null || match.team2Id === -1 ? null : match.team2Id;
-    
-    const gameStatus = 'scheduled';
+    const team1Id =
+      match.team1Id === null || match.team1Id === -1 ? null : match.team1Id;
+    const team2Id =
+      match.team2Id === null || match.team2Id === -1 ? null : match.team2Id;
+
+    const gameStatus = "scheduled";
     const scheduledTime = toMySQLDatetime(match.scheduledTime);
 
     const insertQuery = `
@@ -315,14 +360,20 @@ async function saveScheduleToDatabase(
 
     const result = await db.query(insertQuery, values);
     const dbGameId = result.insertId;
-    
+
     // Map the bracket's gameId to database game_id
     if (match.gameId) {
       gameIdToDbId.set(match.gameId, dbGameId);
-      console.log(`✅ Inserted match: bracket gameId=${match.gameId} → DB game_id=${dbGameId}`);
-      console.log(`   Round ${match.roundNumber}, Game ${match.gameNumber}, Teams: ${team1Id} vs ${team2Id}`);
+      console.log(
+        `✅ Inserted match: bracket gameId=${match.gameId} → DB game_id=${dbGameId}`,
+      );
+      console.log(
+        `   Round ${match.roundNumber}, Game ${match.gameNumber}, Teams: ${team1Id} vs ${team2Id}`,
+      );
     } else {
-      console.warn(`⚠️  Match has no gameId! Round ${match.roundNumber}, Game ${match.gameNumber}`);
+      console.warn(
+        `⚠️  Match has no gameId! Round ${match.roundNumber}, Game ${match.gameNumber}`,
+      );
     }
   }
 
@@ -330,13 +381,13 @@ async function saveScheduleToDatabase(
   console.log(`📊 GameId mappings created: ${gameIdToDbId.size}\n`);
 
   // Second pass: Update parent and child relationships (only for single elimination)
-  console.log('🔗 SECOND PASS: Setting up parent-child relationships...\n');
-  
+  console.log("🔗 SECOND PASS: Setting up parent-child relationships...\n");
+
   let relationshipsSet = 0;
-  
+
   for (const match of matches) {
     if (!match.gameId) continue;
-    
+
     const dbGameId = gameIdToDbId.get(match.gameId);
     if (!dbGameId) {
       console.warn(`⚠️  No DB ID found for bracket gameId ${match.gameId}`);
@@ -350,7 +401,9 @@ async function saveScheduleToDatabase(
     if (match.parentMatchId) {
       parentDbId = gameIdToDbId.get(match.parentMatchId);
       if (!parentDbId) {
-        console.warn(`⚠️  Parent bracket gameId ${match.parentMatchId} not found in DB mapping`);
+        console.warn(
+          `⚠️  Parent bracket gameId ${match.parentMatchId} not found in DB mapping`,
+        );
       }
     }
 
@@ -358,7 +411,9 @@ async function saveScheduleToDatabase(
     if (match.childMatchId) {
       childDbId = gameIdToDbId.get(match.childMatchId);
       if (!childDbId) {
-        console.warn(`⚠️  Child bracket gameId ${match.childMatchId} not found in DB mapping`);
+        console.warn(
+          `⚠️  Child bracket gameId ${match.childMatchId} not found in DB mapping`,
+        );
       }
     }
 
@@ -368,19 +423,21 @@ async function saveScheduleToDatabase(
         `UPDATE tournament_games 
          SET parent_match_id = ?, child_match_id = ?, updated_at = NOW()
          WHERE game_id = ?`,
-        [parentDbId, childDbId, dbGameId]
+        [parentDbId, childDbId, dbGameId],
       );
-      
+
       relationshipsSet++;
       console.log(`🔗 Match ${dbGameId}:`);
-      console.log(`   parent_match_id = ${parentDbId || 'NULL'}`);
-      console.log(`   child_match_id = ${childDbId || 'NULL'}`);
+      console.log(`   parent_match_id = ${parentDbId || "NULL"}`);
+      console.log(`   child_match_id = ${childDbId || "NULL"}`);
     }
   }
-  
+
   console.log(`\n✅ Relationships set: ${relationshipsSet} matches updated`);
-  console.log(`✅ Saved ${matches.length} matches to database with binary tree structure\n`);
-  console.log('=== SCHEDULE SAVE COMPLETE ===\n');
+  console.log(
+    `✅ Saved ${matches.length} matches to database with binary tree structure\n`,
+  );
+  console.log("=== SCHEDULE SAVE COMPLETE ===\n");
 }
 
 /**
@@ -411,7 +468,7 @@ export async function getTournamentSchedule(tournamentId: string): Promise<{
       matches: matches || [],
     };
   } catch (error) {
-    console.error('Error fetching tournament schedule:', error);
+    console.error("Error fetching tournament schedule:", error);
     return {
       success: false,
       matches: [],
@@ -420,45 +477,49 @@ export async function getTournamentSchedule(tournamentId: string): Promise<{
 }
 
 /**
- * Delete tournament schedule (only if no results entered)
+ * Delete tournament schedule (only if no results entered, unless forced)
  * Time Complexity: O(m) where m = number of matches
  */
-export async function deleteTournamentSchedule(tournamentId: string): Promise<{
+export async function deleteTournamentSchedule(
+  tournamentId: string,
+  force: boolean = false,
+): Promise<{
   success: boolean;
   message: string;
 }> {
   try {
-    // Check if any matches have results
-    const matchesWithResults = await db.query(
-      `SELECT COUNT(*) as count 
-       FROM tournament_games 
-       WHERE tournament_id = ? 
-       AND (team1_score IS NOT NULL OR team2_score IS NOT NULL OR game_status = 'completed')`,
-      [tournamentId]
-    );
+    // Check if any matches have results (skip if forcing)
+    if (!force) {
+      const matchesWithResults = await db.query(
+        `SELECT COUNT(*) as count 
+         FROM tournament_games 
+         WHERE tournament_id = ? 
+         AND game_status = 'completed'`,
+        [tournamentId],
+      );
 
-    if (matchesWithResults[0].count > 0) {
-      return {
-        success: false,
-        message: 'Cannot delete schedule. Some matches already have results.',
-      };
+      if (matchesWithResults[0].count > 0) {
+        return {
+          success: false,
+          message: "Cannot delete schedule. Some matches already have results.",
+        };
+      }
     }
 
     // Delete all scheduled matches
-    await db.query(
-      'DELETE FROM tournament_games WHERE tournament_id = ?',
-      [tournamentId]
-    );
+    await db.query("DELETE FROM tournament_games WHERE tournament_id = ?", [
+      tournamentId,
+    ]);
 
     return {
       success: true,
-      message: 'Tournament schedule deleted successfully',
+      message: "Tournament schedule deleted successfully",
     };
   } catch (error) {
-    console.error('Error deleting tournament schedule:', error);
+    console.error("Error deleting tournament schedule:", error);
     return {
       success: false,
-      message: 'Failed to delete tournament schedule',
+      message: "Failed to delete tournament schedule",
     };
   }
 }
@@ -496,7 +557,7 @@ export async function getBracketData(tournamentId: string): Promise<{
       totalRounds: maxRound,
     };
   } catch (error) {
-    console.error('Error getting bracket data:', error);
+    console.error("Error getting bracket data:", error);
     return {
       success: false,
       rounds: new Map(),

@@ -37,7 +37,8 @@ export default function ProfilePage({ user }: ProfilePageProps) {
       user: { color: "badge-secondary", label: "User" },
     };
 
-    const config = roleConfig[role as keyof typeof roleConfig] || roleConfig.user;
+    const config =
+      roleConfig[role as keyof typeof roleConfig] || roleConfig.user;
 
     return (
       <span className={`badge ${config.color} badge-lg gap-1`}>

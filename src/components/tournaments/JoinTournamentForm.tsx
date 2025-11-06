@@ -62,7 +62,9 @@ export default function JoinTournamentForm({ teams, joinAction }: Props) {
     >
       <div className="form-control w-full">
         <label className="label">
-          <span className="label-text font-semibold text-base">Tournament Join Code</span>
+          <span className="label-text font-semibold text-base">
+            Tournament Join Code
+          </span>
         </label>
 
         <input
@@ -74,13 +76,17 @@ export default function JoinTournamentForm({ teams, joinAction }: Props) {
         />
 
         {errors["joinCode"] && (
-          <span className="text-xs text-error mt-1 font-medium">{errors["joinCode"].message}</span>
+          <span className="text-xs text-error mt-1 font-medium">
+            {errors["joinCode"].message}
+          </span>
         )}
       </div>
 
       <div className="form-control w-full">
         <label className="label">
-          <span className="label-text font-semibold text-base">Select Team</span>
+          <span className="label-text font-semibold text-base">
+            Select Team
+          </span>
         </label>
 
         <select
@@ -99,7 +105,9 @@ export default function JoinTournamentForm({ teams, joinAction }: Props) {
         </select>
 
         {errors["teamId"] && (
-          <span className="text-xs text-error mt-1 font-medium">{errors["teamId"].message}</span>
+          <span className="text-xs text-error mt-1 font-medium">
+            {errors["teamId"].message}
+          </span>
         )}
       </div>
 
@@ -117,10 +125,12 @@ export default function JoinTournamentForm({ teams, joinAction }: Props) {
           "Register Team"
         )}
       </button>
-      
+
       {teams.length === 0 && (
         <div className="alert alert-warning shadow-lg">
-          <span>You need to create a team first before joining tournaments.</span>
+          <span>
+            You need to create a team first before joining tournaments.
+          </span>
         </div>
       )}
     </form>

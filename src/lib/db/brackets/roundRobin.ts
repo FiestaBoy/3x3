@@ -1,20 +1,20 @@
 /**
  * Round Robin Tournament Generator
- * 
+ *
  * Algorithm Overview:
  * - Every team plays every other team exactly once
  * - Uses "circle method" for optimal scheduling
  * - Handles odd number of teams with rotating byes
- * 
+ *
  * Time Complexity: O(n²) where n = number of teams
  * Space Complexity: O(n²) for storing all matches
- * 
+ *
  * Circle Method Explanation:
  * Teams are arranged in two rows, one team stays fixed, others rotate
  * This ensures balanced scheduling and minimal waiting time
  */
 
-import { MatchToSchedule } from '../scheduling/timeScheduler';
+import { MatchToSchedule } from "../scheduling/timeScheduler";
 
 export interface Team {
   teamId: number;
@@ -25,11 +25,11 @@ export interface Team {
 /**
  * Generate round robin tournament schedule
  * Time Complexity: O(n²) where n = number of teams
- * 
+ *
  * For n teams, generates n-1 rounds (or n rounds for odd teams with byes)
  * Each round has n/2 matches (or (n-1)/2 for odd n)
  * Total matches: n(n-1)/2
- * 
+ *
  * Example for 4 teams:
  * Round 1: 1vs2, 3vs4
  * Round 2: 1vs3, 2vs4
@@ -37,7 +37,7 @@ export interface Team {
  */
 export function generateRoundRobinSchedule(teams: Team[]): MatchToSchedule[] {
   if (teams.length < 4) {
-    throw new Error('Round robin requires at least 4 teams');
+    throw new Error("Round robin requires at least 4 teams");
   }
 
   console.log(`Generating round robin schedule for ${teams.length} teams`);
@@ -45,32 +45,34 @@ export function generateRoundRobinSchedule(teams: Team[]): MatchToSchedule[] {
   const matches: MatchToSchedule[] = [];
   const n = teams.length;
   const isOdd = n % 2 === 1;
-  
+
   // If odd number of teams, add a dummy team for bye rotation
   const participants = isOdd ? [...teams, null] : [...teams];
   const totalParticipants = participants.length;
   const totalRounds = totalParticipants - 1;
   const matchesPerRound = totalParticipants / 2;
 
-  console.log(`Total rounds: ${totalRounds}, Matches per round: ${matchesPerRound}`);
+  console.log(
+    `Total rounds: ${totalRounds}, Matches per round: ${matchesPerRound}`,
+  );
 
   /**
    * Circle Method Implementation
-   * 
+   *
    * Fixed position: participants[0] stays in place
    * Rotating positions: participants[1..n-1] rotate clockwise
-   * 
+   *
    * Visual representation for 6 teams:
    * Round 1: [1] 2 3    Round 2: [1] 6 2    Round 3: [1] 5 6
    *          6 5 4              5 4 3              4 3 2
-   * 
+   *
    * Matches: 1v6, 2v5, 3v4    1v5, 6v4, 2v3    1v4, 5v3, 6v2
    */
   let gameNumber = 1;
 
   for (let round = 0; round < totalRounds; round++) {
     const roundNumber = round + 1;
-    
+
     // Generate matches for this round using circle method
     for (let match = 0; match < matchesPerRound; match++) {
       let home: Team | null;
@@ -88,7 +90,9 @@ export function generateRoundRobinSchedule(teams: Team[]): MatchToSchedule[] {
 
       // Skip if either team is null (bye)
       if (!home || !away) {
-        console.log(`Round ${roundNumber}: Bye for ${home?.teamName || away?.teamName}`);
+        console.log(
+          `Round ${roundNumber}: Bye for ${home?.teamName || away?.teamName}`,
+        );
         continue;
       }
 
@@ -97,7 +101,7 @@ export function generateRoundRobinSchedule(teams: Team[]): MatchToSchedule[] {
         team2Id: away.teamId,
         roundNumber,
         gameNumber,
-        bracketType: 'winners', // Round robin uses 'winners' bracket type
+        bracketType: "winners", // Round robin uses 'winners' bracket type
       });
 
       gameNumber++;
@@ -143,7 +147,7 @@ export function calculateRoundRobinStats(numberOfTeams: number): {
 /**
  * Get round robin standings with tiebreaker logic
  * Time Complexity: O(n log n + m) where n = teams, m = matches
- * 
+ *
  * Tiebreaker order:
  * 1. Wins (most wins ranked higher)
  * 2. Head-to-Head record (if 2 teams tied)
@@ -153,7 +157,7 @@ export function calculateRoundRobinStats(numberOfTeams: number): {
  */
 export async function getRoundRobinStandings(
   tournamentId: string,
-  db: any
+  db: any,
 ): Promise<any[]> {
   // Get all teams with their statistics
   const teams = await db.query(
@@ -170,7 +174,7 @@ export async function getRoundRobinStandings(
     INNER JOIN teams t ON tt.team_id = t.team_id
     WHERE tt.tournament_id = ?
     ORDER BY tt.wins DESC, point_differential DESC, tt.points_scored DESC, tt.seed_number ASC`,
-    [tournamentId]
+    [tournamentId],
   );
 
   // Get all completed matches for head-to-head calculation
@@ -178,7 +182,7 @@ export async function getRoundRobinStandings(
     `SELECT team1_id, team2_id, winner_team_id
      FROM tournament_games
      WHERE tournament_id = ? AND game_status = 'completed'`,
-    [tournamentId]
+    [tournamentId],
   );
 
   // Apply tiebreaker logic
@@ -194,7 +198,7 @@ export async function getRoundRobinStandings(
 async function applyTiebreakers(teams: any[], matches: any[]): Promise<any[]> {
   // Group teams by number of wins
   const winGroups: Map<number, any[]> = new Map();
-  
+
   for (const team of teams) {
     const wins = team.wins;
     if (!winGroups.has(wins)) {
@@ -206,7 +210,9 @@ async function applyTiebreakers(teams: any[], matches: any[]): Promise<any[]> {
   const finalStandings: any[] = [];
 
   // Process each win group separately
-  for (const [wins, groupTeams] of Array.from(winGroups.entries()).sort((a, b) => b[0] - a[0])) {
+  for (const [wins, groupTeams] of Array.from(winGroups.entries()).sort(
+    (a, b) => b[0] - a[0],
+  )) {
     if (groupTeams.length === 1) {
       // No tie, add directly
       finalStandings.push(groupTeams[0]);
@@ -248,7 +254,7 @@ function breakTwoWayTie(team1: any, team2: any, matches: any[]): any[] {
   const h2hMatch = matches.find(
     (m: any) =>
       (m.team1_id === team1.team_id && m.team2_id === team2.team_id) ||
-      (m.team1_id === team2.team_id && m.team2_id === team1.team_id)
+      (m.team1_id === team2.team_id && m.team2_id === team1.team_id),
   );
 
   if (h2hMatch) {
@@ -287,7 +293,7 @@ function breakTwoWayTie(team1: any, team2: any, matches: any[]): any[] {
  */
 export function validateRoundRobinSchedule(
   matches: MatchToSchedule[],
-  teams: Team[]
+  teams: Team[],
 ): {
   valid: boolean;
   errors: string[];
@@ -299,7 +305,7 @@ export function validateRoundRobinSchedule(
   // Check total number of matches
   if (matches.length !== expectedMatches) {
     errors.push(
-      `Expected ${expectedMatches} matches for ${n} teams, got ${matches.length}`
+      `Expected ${expectedMatches} matches for ${n} teams, got ${matches.length}`,
     );
   }
 
@@ -307,6 +313,12 @@ export function validateRoundRobinSchedule(
   const matchups: Set<string> = new Set();
 
   for (const match of matches) {
+    // Skip matches with null teams
+    if (match.team1Id === null || match.team2Id === null) {
+      errors.push(`Match has null team assignment`);
+      continue;
+    }
+
     // Create unique key for matchup (sorted team IDs)
     const key =
       match.team1Id < match.team2Id
@@ -329,15 +341,25 @@ export function validateRoundRobinSchedule(
   const teamMatchCounts: Map<number, number> = new Map();
 
   for (const match of matches) {
-    teamMatchCounts.set(match.team1Id, (teamMatchCounts.get(match.team1Id) || 0) + 1);
-    teamMatchCounts.set(match.team2Id, (teamMatchCounts.get(match.team2Id) || 0) + 1);
+    if (match.team1Id !== null) {
+      teamMatchCounts.set(
+        match.team1Id,
+        (teamMatchCounts.get(match.team1Id) || 0) + 1,
+      );
+    }
+    if (match.team2Id !== null) {
+      teamMatchCounts.set(
+        match.team2Id,
+        (teamMatchCounts.get(match.team2Id) || 0) + 1,
+      );
+    }
   }
 
   for (const team of teams) {
     const matchCount = teamMatchCounts.get(team.teamId) || 0;
     if (matchCount !== n - 1) {
       errors.push(
-        `Team ${team.teamId} (${team.teamName}) plays ${matchCount} matches, expected ${n - 1}`
+        `Team ${team.teamId} (${team.teamName}) plays ${matchCount} matches, expected ${n - 1}`,
       );
     }
   }

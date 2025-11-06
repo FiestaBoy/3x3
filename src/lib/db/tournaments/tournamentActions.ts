@@ -1,9 +1,9 @@
 "use server";
 
 import { TournamentFormFields } from "@/src/components/tournaments/CreateTournamentForm";
-import { getUserSession } from "./helpers";
+import { getUserSession } from "../utils/helpers";
 import { revalidatePath } from "next/cache";
-import { generateJoinCode } from "./createTeam";
+import { generateJoinCode } from "../teams/createTeam";
 
 const db = require("@/src/lib/db/db");
 
@@ -27,8 +27,8 @@ export async function createTournament(data: TournamentFormFields) {
           "A tournament with this name already exists for this age group",
       };
     }
-  
-    const joinCode = data.isPrivate ? await generateJoinCode() : null
+
+    const joinCode = data.isPrivate ? await generateJoinCode() : null;
 
     const tournamentQuery = `
       INSERT INTO tournaments (
@@ -57,7 +57,7 @@ export async function createTournament(data: TournamentFormFields) {
       data.contactEmail || null,
       data.contactPhone || null,
       data.isPrivate,
-      joinCode
+      joinCode,
     ]);
 
     const tournamentId = result.insertId;
@@ -136,14 +136,17 @@ export async function getTournaments(filters?: {
   }
 }
 
-export async function joinPublicTournament(tournamentId: string, teamId: string) {
+export async function joinPublicTournament(
+  tournamentId: string,
+  teamId: string,
+) {
   try {
     const session = await getUserSession();
 
     // Verify team captain
     const captainCheck = await db.query(
       "SELECT captain_id FROM teams WHERE team_id = ?",
-      [teamId]
+      [teamId],
     );
 
     if (!captainCheck || captainCheck.length === 0) {
@@ -151,13 +154,16 @@ export async function joinPublicTournament(tournamentId: string, teamId: string)
     }
 
     if (String(captainCheck[0].captain_id) !== String(session.userId)) {
-      return { success: false, message: "Only team captains can register teams" };
+      return {
+        success: false,
+        message: "Only team captains can register teams",
+      };
     }
 
     // Check if already registered
     const existingReg = await db.query(
       "SELECT 1 FROM team_tournament WHERE tournament_id = ? AND team_id = ?",
-      [tournamentId, teamId]
+      [tournamentId, teamId],
     );
 
     if (existingReg && existingReg.length > 0) {
@@ -167,7 +173,7 @@ export async function joinPublicTournament(tournamentId: string, teamId: string)
     // Check tournament capacity
     const capacityCheck = await db.query(
       "SELECT max_teams, (SELECT COUNT(*) FROM team_tournament WHERE tournament_id = ?) as current_teams FROM tournaments WHERE tournament_id = ?",
-      [tournamentId, tournamentId]
+      [tournamentId, tournamentId],
     );
 
     if (capacityCheck && capacityCheck.length > 0) {
@@ -180,7 +186,7 @@ export async function joinPublicTournament(tournamentId: string, teamId: string)
     // Register team
     await db.query(
       "INSERT INTO team_tournament (tournament_id, team_id) VALUES (?, ?)",
-      [tournamentId, teamId]
+      [tournamentId, teamId],
     );
 
     revalidatePath("/tournaments");
@@ -289,7 +295,7 @@ export async function withdrawFromTournament(tournamentId: string) {
     // Delete the registration
     await db.query(
       "DELETE FROM team_tournament WHERE tournament_id = ? AND team_id = ?",
-      [tournamentId, team_id]
+      [tournamentId, team_id],
     );
 
     revalidatePath("/tournaments");
@@ -334,7 +340,7 @@ export async function regenerateTournamentJoinCode(tournamentId: string) {
     // Check if user is the organizer
     const organizerCheck = await db.query(
       "SELECT 1 FROM tournaments WHERE tournament_id = ? AND organizer_id = ?",
-      [tournamentId, session.userId]
+      [tournamentId, session.userId],
     );
 
     if (!organizerCheck || organizerCheck.length === 0) {
@@ -353,7 +359,7 @@ export async function regenerateTournamentJoinCode(tournamentId: string) {
 
       const existing = await db.query(
         "SELECT 1 FROM tournaments WHERE join_code = ?",
-        [newCode]
+        [newCode],
       );
 
       if (!existing || existing.length === 0) {
@@ -366,10 +372,10 @@ export async function regenerateTournamentJoinCode(tournamentId: string) {
       return { success: false, message: "Failed to generate unique code" };
     }
 
-    await db.query("UPDATE tournaments SET join_code = ? WHERE tournament_id = ?", [
-      newCode,
-      tournamentId,
-    ]);
+    await db.query(
+      "UPDATE tournaments SET join_code = ? WHERE tournament_id = ?",
+      [newCode, tournamentId],
+    );
 
     revalidatePath("/tournaments");
     return {
@@ -385,7 +391,7 @@ export async function regenerateTournamentJoinCode(tournamentId: string) {
 
 export async function updateTournamentSettings(
   tournamentId: string,
-  data: Partial<TournamentFormFields>
+  data: Partial<TournamentFormFields>,
 ) {
   try {
     const session = await getUserSession();
@@ -393,7 +399,7 @@ export async function updateTournamentSettings(
     // Verify user is the organizer
     const organizerCheck = await db.query(
       "SELECT organizer_id FROM tournaments WHERE tournament_id = ?",
-      [tournamentId]
+      [tournamentId],
     );
 
     if (!organizerCheck || organizerCheck.length === 0) {
@@ -410,13 +416,14 @@ export async function updateTournamentSettings(
     // Check if tournament has started
     const hasSchedule = await db.query(
       "SELECT COUNT(*) as count FROM tournament_games WHERE tournament_id = ?",
-      [tournamentId]
+      [tournamentId],
     );
 
     if (hasSchedule[0].count > 0) {
       return {
         success: false,
-        message: "Cannot modify tournament settings after schedule is generated",
+        message:
+          "Cannot modify tournament settings after schedule is generated",
       };
     }
 
@@ -478,7 +485,7 @@ export async function updateTournamentSettings(
       // Check if reducing max teams below current registrations
       const currentTeams = await db.query(
         "SELECT COUNT(*) as count FROM team_tournament WHERE tournament_id = ?",
-        [tournamentId]
+        [tournamentId],
       );
 
       if (data.maxTeams < currentTeams[0].count) {
@@ -554,7 +561,7 @@ export async function deleteTournament(tournamentId: string) {
     // Verify user is the organizer
     const organizerCheck = await db.query(
       "SELECT organizer_id FROM tournaments WHERE tournament_id = ?",
-      [tournamentId]
+      [tournamentId],
     );
 
     if (!organizerCheck || organizerCheck.length === 0) {
@@ -571,7 +578,7 @@ export async function deleteTournament(tournamentId: string) {
     // Check if tournament has started
     const hasSchedule = await db.query(
       "SELECT COUNT(*) as count FROM tournament_games WHERE tournament_id = ? AND game_status != 'pending'",
-      [tournamentId]
+      [tournamentId],
     );
 
     if (hasSchedule[0].count > 0) {
@@ -604,14 +611,17 @@ export async function deleteTournament(tournamentId: string) {
   }
 }
 
-export async function removeTournamentTeam(tournamentId: string, teamId: string) {
+export async function removeTournamentTeam(
+  tournamentId: string,
+  teamId: string,
+) {
   try {
     const session = await getUserSession();
 
     // Verify user is the organizer
     const organizerCheck = await db.query(
       "SELECT organizer_id FROM tournaments WHERE tournament_id = ?",
-      [tournamentId]
+      [tournamentId],
     );
 
     if (!organizerCheck || organizerCheck.length === 0) {
@@ -632,7 +642,7 @@ export async function removeTournamentTeam(tournamentId: string, teamId: string)
        WHERE tournament_id = ? 
        AND (team1_id = ? OR team2_id = ?) 
        AND game_status IN ('completed', 'in_progress')`,
-      [tournamentId, teamId, teamId]
+      [tournamentId, teamId, teamId],
     );
 
     if (hasStarted[0].count > 0) {
@@ -645,7 +655,7 @@ export async function removeTournamentTeam(tournamentId: string, teamId: string)
     // Check if team is registered
     const registrationCheck = await db.query(
       "SELECT 1 FROM team_tournament WHERE tournament_id = ? AND team_id = ?",
-      [tournamentId, teamId]
+      [tournamentId, teamId],
     );
 
     if (!registrationCheck || registrationCheck.length === 0) {
@@ -658,7 +668,7 @@ export async function removeTournamentTeam(tournamentId: string, teamId: string)
     // Remove the team from tournament
     await db.query(
       "DELETE FROM team_tournament WHERE tournament_id = ? AND team_id = ?",
-      [tournamentId, teamId]
+      [tournamentId, teamId],
     );
 
     // If there are scheduled games for this team, cancel them
@@ -668,7 +678,7 @@ export async function removeTournamentTeam(tournamentId: string, teamId: string)
        WHERE tournament_id = ? 
        AND (team1_id = ? OR team2_id = ?) 
        AND game_status = 'scheduled'`,
-      [tournamentId, teamId, teamId]
+      [tournamentId, teamId, teamId],
     );
 
     revalidatePath("/tournaments");

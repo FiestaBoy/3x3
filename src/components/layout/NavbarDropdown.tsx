@@ -1,7 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Menu, CircleUser, LogOut } from "lucide-react";
-import { logOut } from "../../lib/session";
+import { logOut } from "../../lib/db/auth/session";
 import Link from "next/link";
 
 export default function Dropdown() {
@@ -23,7 +24,10 @@ export default function Dropdown() {
         className="menu menu-sm dropdown-content mt-3 z-[1] p-3 shadow-xl bg-base-100 rounded-box w-52 border border-base-300"
       >
         <li>
-          <Link href="/profile" className="hover:bg-primary hover:text-primary-content transition-all py-3 rounded-lg">
+          <Link
+            href="/profile"
+            className="hover:bg-primary hover:text-primary-content transition-all py-3 rounded-lg"
+          >
             <CircleUser className="h-5 w-5" />
             <span className="text-base">Profile</span>
           </Link>

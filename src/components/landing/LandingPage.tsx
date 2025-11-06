@@ -1,18 +1,18 @@
 import Link from "next/link";
-import { SessionPayload } from "@/src/lib/session";
-import { 
-  Trophy, 
-  Users, 
-  Calendar, 
-  BarChart3, 
-  Zap, 
+import { SessionPayload } from "@/src/lib/db/auth/session";
+import {
+  Trophy,
+  Users,
+  Calendar,
+  BarChart3,
+  Zap,
   Shield,
   Target,
   Globe,
   Award,
   Clock,
   MapPin,
-  CheckCircle
+  CheckCircle,
 } from "lucide-react";
 
 type SessionProps = {
@@ -37,10 +37,11 @@ export default function LandingPage({ session }: SessionProps) {
               <span className="block text-primary mt-2">Like a Pro</span>
             </h1>
             <p className="text-xl md:text-2xl mb-8 text-base-content/80">
-              Create tournaments, manage teams, track standings, and run seamless basketball events.
-              Everything you need in one powerful platform.
+              Create tournaments, manage teams, track standings, and run
+              seamless basketball events. Everything you need in one powerful
+              platform.
             </p>
-            
+
             {session ? (
               <div className="flex gap-4 justify-center flex-wrap">
                 <Link href="/teams/create">
@@ -65,9 +66,7 @@ export default function LandingPage({ session }: SessionProps) {
                   </button>
                 </Link>
                 <Link href="/auth/login">
-                  <button className="btn btn-outline btn-lg">
-                    Sign In
-                  </button>
+                  <button className="btn btn-outline btn-lg">Sign In</button>
                 </Link>
               </div>
             )}
@@ -86,7 +85,7 @@ export default function LandingPage({ session }: SessionProps) {
             <div className="stat-value text-primary">2</div>
             <div className="stat-desc">Single Elimination & Round Robin</div>
           </div>
-          
+
           <div className="stat">
             <div className="stat-figure text-secondary">
               <Users size={32} />
@@ -95,7 +94,7 @@ export default function LandingPage({ session }: SessionProps) {
             <div className="stat-value text-secondary">∞</div>
             <div className="stat-desc">Unlimited teams & players</div>
           </div>
-          
+
           <div className="stat">
             <div className="stat-figure text-accent">
               <BarChart3 size={32} />
@@ -114,7 +113,8 @@ export default function LandingPage({ session }: SessionProps) {
             Everything You Need to Run Tournaments
           </h2>
           <p className="text-xl text-base-content/70 max-w-2xl mx-auto">
-            Professional-grade tournament management tools designed for organizers, teams, and players.
+            Professional-grade tournament management tools designed for
+            organizers, teams, and players.
           </p>
         </div>
 
@@ -127,7 +127,8 @@ export default function LandingPage({ session }: SessionProps) {
               </div>
               <h3 className="card-title">Tournament Creation</h3>
               <p className="text-base-content/70">
-                Set up single elimination or round robin tournaments in minutes. Configure teams, schedules, and brackets effortlessly.
+                Set up single elimination or round robin tournaments in minutes.
+                Configure teams, schedules, and brackets effortlessly.
               </p>
               <div className="flex gap-2 flex-wrap mt-2">
                 <div className="badge badge-sm">Single Elimination</div>
@@ -144,7 +145,8 @@ export default function LandingPage({ session }: SessionProps) {
               </div>
               <h3 className="card-title">Smart Scheduling</h3>
               <p className="text-base-content/70">
-                Automatic match scheduling with court assignments, time slots, and break management. Optimized for multi-day events.
+                Automatic match scheduling with court assignments, time slots,
+                and break management. Optimized for multi-day events.
               </p>
               <div className="flex gap-2 flex-wrap mt-2">
                 <div className="badge badge-sm">Auto-scheduling</div>
@@ -161,7 +163,8 @@ export default function LandingPage({ session }: SessionProps) {
               </div>
               <h3 className="card-title">Team Management</h3>
               <p className="text-base-content/70">
-                Create teams, invite players, assign captains. Manage rosters with age groups and player roles seamlessly.
+                Create teams, invite players, assign captains. Manage rosters
+                with age groups and player roles seamlessly.
               </p>
               <div className="flex gap-2 flex-wrap mt-2">
                 <div className="badge badge-sm">Role Management</div>
@@ -178,7 +181,8 @@ export default function LandingPage({ session }: SessionProps) {
               </div>
               <h3 className="card-title">Live Standings</h3>
               <p className="text-base-content/70">
-                Real-time standings with wins, losses, point differentials, and rankings. Automatically updated after each match.
+                Real-time standings with wins, losses, point differentials, and
+                rankings. Automatically updated after each match.
               </p>
               <div className="flex gap-2 flex-wrap mt-2">
                 <div className="badge badge-sm">Real-time Updates</div>
@@ -195,7 +199,8 @@ export default function LandingPage({ session }: SessionProps) {
               </div>
               <h3 className="card-title">Match Management</h3>
               <p className="text-base-content/70">
-                Enter scores, record results, handle forfeits. Winner progression is automatic.
+                Enter scores, record results, handle forfeits. Winner
+                progression is automatic.
               </p>
               <div className="flex gap-2 flex-wrap mt-2">
                 <div className="badge badge-sm">Score Entry</div>
@@ -212,7 +217,8 @@ export default function LandingPage({ session }: SessionProps) {
               </div>
               <h3 className="card-title">Bracket Visualization</h3>
               <p className="text-base-content/70">
-                Beautiful bracket views with match results, team progression, and tournament flow.
+                Beautiful bracket views with match results, team progression,
+                and tournament flow.
               </p>
               <div className="flex gap-2 flex-wrap mt-2">
                 <div className="badge badge-sm">Visual Brackets</div>
@@ -241,7 +247,8 @@ export default function LandingPage({ session }: SessionProps) {
               </div>
               <h3 className="text-xl font-bold mb-2">Create & Configure</h3>
               <p className="text-base-content/70">
-                Set up your tournament with format, teams, location, and schedule preferences
+                Set up your tournament with format, teams, location, and
+                schedule preferences
               </p>
             </div>
 
@@ -251,7 +258,8 @@ export default function LandingPage({ session }: SessionProps) {
               </div>
               <h3 className="text-xl font-bold mb-2">Generate Schedule</h3>
               <p className="text-base-content/70">
-                Automatic bracket generation and smart scheduling across courts and days
+                Automatic bracket generation and smart scheduling across courts
+                and days
               </p>
             </div>
 
@@ -261,7 +269,8 @@ export default function LandingPage({ session }: SessionProps) {
               </div>
               <h3 className="text-xl font-bold mb-2">Run & Track</h3>
               <p className="text-base-content/70">
-                Enter results, track standings, and manage matches as your tournament progresses
+                Enter results, track standings, and manage matches as your
+                tournament progresses
               </p>
             </div>
           </div>
@@ -282,7 +291,10 @@ export default function LandingPage({ session }: SessionProps) {
                 </div>
                 <div>
                   <h4 className="font-semibold mb-1">Save Time</h4>
-                  <p className="text-base-content/70">Automated scheduling and bracket management saves hours of manual work</p>
+                  <p className="text-base-content/70">
+                    Automated scheduling and bracket management saves hours of
+                    manual work
+                  </p>
                 </div>
               </div>
 
@@ -292,7 +304,10 @@ export default function LandingPage({ session }: SessionProps) {
                 </div>
                 <div>
                   <h4 className="font-semibold mb-1">Professional Results</h4>
-                  <p className="text-base-content/70">Clean brackets, accurate standings, and real-time updates for participants</p>
+                  <p className="text-base-content/70">
+                    Clean brackets, accurate standings, and real-time updates
+                    for participants
+                  </p>
                 </div>
               </div>
 
@@ -302,7 +317,10 @@ export default function LandingPage({ session }: SessionProps) {
                 </div>
                 <div>
                   <h4 className="font-semibold mb-1">Easy Team Management</h4>
-                  <p className="text-base-content/70">Remove teams, track registrations, and manage participants effortlessly</p>
+                  <p className="text-base-content/70">
+                    Remove teams, track registrations, and manage participants
+                    effortlessly
+                  </p>
                 </div>
               </div>
             </div>
@@ -349,9 +367,10 @@ export default function LandingPage({ session }: SessionProps) {
             Ready to Host Your Next Tournament?
           </h2>
           <p className="text-xl text-primary-content/90 mb-8 max-w-2xl mx-auto">
-            Join organizers who trust our platform for professional 3x3 basketball tournament management.
+            Join organizers who trust our platform for professional 3x3
+            basketball tournament management.
           </p>
-          
+
           {session ? (
             <div className="flex gap-4 justify-center flex-wrap">
               <Link href="/tournaments/create">

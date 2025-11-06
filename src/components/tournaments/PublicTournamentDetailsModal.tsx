@@ -12,11 +12,11 @@ import {
   Phone,
   AlertCircle,
 } from "lucide-react";
-import { getCaptainTeamNames } from "@/src/lib/db/helpers";
-import { joinPublicTournament } from "@/src/lib/db/tournamentActions";
+import { getCaptainTeamNames } from "@/src/lib/db/utils/helpers";
+import { joinPublicTournament } from "@/src/lib/db/tournaments/tournamentActions";
 import StandingsDisplay from "./StandingsDisplay";
-import { getTournamentStandings } from "@/src/lib/db/tournamentActions";
-import { getTournamentSchedule } from "@/src/lib/db/tournamentScheduler";
+import { getTournamentStandings } from "@/src/lib/db/tournaments/tournamentActions";
+import { getTournamentSchedule } from "@/src/lib/db/tournaments/tournamentScheduler";
 import BracketVisualization from "./BracketVisualization";
 
 interface TournamentDetailsModalProps {
@@ -32,7 +32,9 @@ export default function TournamentDetailsModal({
   tournamentId,
   tournament,
 }: TournamentDetailsModalProps) {
-  const [activeTab, setActiveTab] = useState<"details" | "standings" | "bracket" | "register">("details");
+  const [activeTab, setActiveTab] = useState<
+    "details" | "standings" | "bracket" | "register"
+  >("details");
   const [teams, setTeams] = useState<{ team_id: string; name: string }[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
@@ -158,11 +160,23 @@ export default function TournamentDetailsModal({
     const regEnd = new Date(tournament.registration_end);
 
     if (now < regStart) {
-      return { text: "Registration opens soon", color: "badge-info", canRegister: false };
+      return {
+        text: "Registration opens soon",
+        color: "badge-info",
+        canRegister: false,
+      };
     } else if (now >= regStart && now <= regEnd) {
-      return { text: "Registration Open", color: "badge-success", canRegister: true };
+      return {
+        text: "Registration Open",
+        color: "badge-success",
+        canRegister: true,
+      };
     } else {
-      return { text: "Registration Closed", color: "badge-error", canRegister: false };
+      return {
+        text: "Registration Closed",
+        color: "badge-error",
+        canRegister: false,
+      };
     }
   };
 
@@ -240,19 +254,24 @@ export default function TournamentDetailsModal({
 
         {/* Tab Content */}
         {activeTab === "details" && (
-          <DetailsTab tournament={tournament} formatDate={formatDate} formatDateTime={formatDateTime} formatTournamentFormat={formatTournamentFormat} />
+          <DetailsTab
+            tournament={tournament}
+            formatDate={formatDate}
+            formatDateTime={formatDateTime}
+            formatTournamentFormat={formatTournamentFormat}
+          />
         )}
 
         {activeTab === "standings" && (
-          <StandingsDisplay 
-            teams={standings} 
+          <StandingsDisplay
+            teams={standings}
             isLoading={isLoadingStandings}
             format={tournament.format}
           />
         )}
 
         {activeTab === "bracket" && (
-          <BracketTab 
+          <BracketTab
             matches={matches}
             tournament={tournament}
             isLoading={isLoadingMatches}
@@ -272,7 +291,11 @@ export default function TournamentDetailsModal({
 
         {/* Action Buttons */}
         <div className="modal-action">
-          <button className="btn btn-ghost" onClick={onClose} disabled={isLoading}>
+          <button
+            className="btn btn-ghost"
+            onClick={onClose}
+            disabled={isLoading}
+          >
             Close
           </button>
         </div>
@@ -288,14 +311,21 @@ interface DetailsTabProps {
   formatTournamentFormat: (format: string) => string;
 }
 
-function DetailsTab({ tournament, formatDate, formatDateTime, formatTournamentFormat }: DetailsTabProps) {
+function DetailsTab({
+  tournament,
+  formatDate,
+  formatDateTime,
+  formatTournamentFormat,
+}: DetailsTabProps) {
   return (
     <div className="space-y-6">
       {/* Description */}
       {tournament.description && (
         <div>
           <h4 className="font-semibold mb-2">About This Tournament</h4>
-          <p className="text-sm text-base-content/70">{tournament.description}</p>
+          <p className="text-sm text-base-content/70">
+            {tournament.description}
+          </p>
         </div>
       )}
 
@@ -343,11 +373,15 @@ function DetailsTab({ tournament, formatDate, formatDateTime, formatTournamentFo
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-base-content/70">Opens:</span>
-            <span className="font-medium">{formatDateTime(tournament.registration_start)}</span>
+            <span className="font-medium">
+              {formatDateTime(tournament.registration_start)}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-base-content/70">Closes:</span>
-            <span className="font-medium">{formatDateTime(tournament.registration_end)}</span>
+            <span className="font-medium">
+              {formatDateTime(tournament.registration_end)}
+            </span>
           </div>
         </div>
       </div>
@@ -356,7 +390,9 @@ function DetailsTab({ tournament, formatDate, formatDateTime, formatTournamentFo
       {tournament.venue_details && (
         <div className="bg-base-200 p-4 rounded-lg">
           <h4 className="font-semibold mb-2">Venue Information</h4>
-          <p className="text-sm text-base-content/70">{tournament.venue_details}</p>
+          <p className="text-sm text-base-content/70">
+            {tournament.venue_details}
+          </p>
         </div>
       )}
 
@@ -368,7 +404,10 @@ function DetailsTab({ tournament, formatDate, formatDateTime, formatTournamentFo
             {tournament.contact_email && (
               <div className="flex items-center gap-2 text-sm">
                 <Mail size={16} className="text-base-content/70" />
-                <a href={`mailto:${tournament.contact_email}`} className="link link-primary">
+                <a
+                  href={`mailto:${tournament.contact_email}`}
+                  className="link link-primary"
+                >
                   {tournament.contact_email}
                 </a>
               </div>
@@ -376,7 +415,10 @@ function DetailsTab({ tournament, formatDate, formatDateTime, formatTournamentFo
             {tournament.contact_phone && (
               <div className="flex items-center gap-2 text-sm">
                 <Phone size={16} className="text-base-content/70" />
-                <a href={`tel:${tournament.contact_phone}`} className="link link-primary">
+                <a
+                  href={`tel:${tournament.contact_phone}`}
+                  className="link link-primary"
+                >
                   {tournament.contact_phone}
                 </a>
               </div>
@@ -403,7 +445,9 @@ function InfoCard({ icon, label, value, subtitle }: InfoCardProps) {
         <span className="text-xs font-medium uppercase">{label}</span>
       </div>
       <p className="font-semibold">{value}</p>
-      {subtitle && <p className="text-xs text-base-content/70 mt-1">{subtitle}</p>}
+      {subtitle && (
+        <p className="text-xs text-base-content/70 mt-1">{subtitle}</p>
+      )}
     </div>
   );
 }
@@ -446,7 +490,9 @@ function RegisterTab({
       <div className="form-control w-full">
         <label className="label">
           <span className="label-text font-semibold">Select Your Team</span>
-          <span className="label-text-alt">{teams.length} team(s) available</span>
+          <span className="label-text-alt">
+            {teams.length} team(s) available
+          </span>
         </label>
 
         {teams.length > 0 ? (

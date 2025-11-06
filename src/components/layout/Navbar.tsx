@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Search, Trophy } from "lucide-react";
 import ThemeController from "./ThemeController";
-import { SessionPayload } from "../../lib/session";
+import { SessionPayload } from "../../lib/db/auth/session";
 import Dropdown from "./NavbarDropdown";
 
 type NavbarProps = {

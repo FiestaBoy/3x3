@@ -1,6 +1,6 @@
 "use client";
 
-import { createTournament } from "@/src/lib/db/tournamentActions";
+import { createTournament } from "@/src/lib/db/tournaments/tournamentActions";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -29,10 +29,7 @@ const schema = z
       .number()
       .min(4, { message: "Minimum 4 teams" })
       .max(64, { message: "Maximum 64 teams" }),
-    format: z.enum([
-      "single_elimination",
-      "round_robin",
-    ]),
+    format: z.enum(["single_elimination", "round_robin"]),
     gameDuration: z
       .number()
       .min(5, { message: "Minimum 5 minutes" })
@@ -54,14 +51,14 @@ const schema = z
     {
       message: "Registration end must be after registration start",
       path: ["registrationEnd"],
-    }
+    },
   )
   .refine(
     (data) => new Date(data.registrationEnd) <= new Date(data.startDate),
     {
       message: "Registration must close before tournament starts",
       path: ["registrationEnd"],
-    }
+    },
   );
 
 export type TournamentFormFields = z.infer<typeof schema>;

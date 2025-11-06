@@ -16,19 +16,25 @@ export default function page() {
           <p className="text-lg text-base-content/70 mb-6">
             View and manage all the teams you're part of
           </p>
-          
+
           <div className="flex gap-3 justify-center flex-wrap">
-            <Link href="/teams/create" className="btn btn-primary gap-2 shadow-lg hover:shadow-xl transition-all">
+            <Link
+              href="/teams/create"
+              className="btn btn-primary gap-2 shadow-lg hover:shadow-xl transition-all"
+            >
               <Plus className="h-5 w-5" />
               Create Team
             </Link>
-            <Link href="/teams/join" className="btn btn-outline btn-secondary gap-2 hover:shadow-lg transition-all">
+            <Link
+              href="/teams/join"
+              className="btn btn-outline btn-secondary gap-2 hover:shadow-lg transition-all"
+            >
               <Users className="h-5 w-5" />
               Join Team
             </Link>
           </div>
         </div>
-        
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           <TeamGrid />
         </div>

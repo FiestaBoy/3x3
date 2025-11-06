@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { TeamInfo } from "@/src/lib/db/getMyTeams";
+import { TeamInfo } from "@/src/lib/db/teams/getMyTeams";
 import Button from "../common/Button";
 import TeamManagementModal from "./TeamManagementModal";
-import { getTeamDetails, TeamDetails } from "@/src/lib/db/teamActions";
+import { getTeamDetails, TeamDetails } from "@/src/lib/db/teams/teamActions";
 import { Users, Copy, Crown, User, Check } from "lucide-react";
 
 export default function TeamCard(team: TeamInfo) {
@@ -44,10 +44,14 @@ export default function TeamCard(team: TeamInfo) {
       <div className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-200 border border-base-300 hover:border-primary/50">
         <div className="card-body gap-4">
           <div className="flex items-center justify-between">
-            <h3 className="card-title text-xl font-bold text-primary">{team.name}</h3>
+            <h3 className="card-title text-xl font-bold text-primary">
+              {team.name}
+            </h3>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="badge badge-outline badge-lg">{team.ageGroup}</span>
+            <span className="badge badge-outline badge-lg">
+              {team.ageGroup}
+            </span>
             {team.role === "captain" ? (
               <span className="badge badge-primary badge-lg gap-1">
                 <Users className="w-3 h-3" />
@@ -61,7 +65,9 @@ export default function TeamCard(team: TeamInfo) {
             )}
           </div>
           <div className="bg-base-200 p-3 rounded-lg border border-base-300">
-            <span className="text-xs text-base-content/60 block mb-1">Join Code</span>
+            <span className="text-xs text-base-content/60 block mb-1">
+              Join Code
+            </span>
             <code
               className="bg-base-300 px-3 py-2 rounded text-sm flex items-center gap-2 cursor-pointer hover:bg-primary/10 transition-all font-mono font-bold"
               onClick={handleCopy}
@@ -73,12 +79,13 @@ export default function TeamCard(team: TeamInfo) {
               ) : (
                 <Copy size={16} className="ml-auto" />
               )}
-              {copied && (
-                <span className="text-success text-xs">Copied!</span>
-              )}
+              {copied && <span className="text-success text-xs">Copied!</span>}
             </code>
           </div>
-          <Button className="btn-primary w-full mt-2 shadow-lg hover:shadow-xl transition-all gap-2" onClick={openModal}>
+          <Button
+            className="btn-primary w-full mt-2 shadow-lg hover:shadow-xl transition-all gap-2"
+            onClick={openModal}
+          >
             <Users className="w-4 h-4" />
             {team.role === "captain" ? "Manage Team" : "View Team"}
           </Button>

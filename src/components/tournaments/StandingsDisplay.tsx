@@ -21,7 +21,11 @@ interface TeamStanding {
   rank?: number;
 }
 
-export default function StandingsDisplay({ teams, isLoading = false, format }: StandingsDisplayProps) {
+export default function StandingsDisplay({
+  teams,
+  isLoading = false,
+  format,
+}: StandingsDisplayProps) {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center py-12">
@@ -46,9 +50,8 @@ export default function StandingsDisplay({ teams, isLoading = false, format }: S
   const sortedTeams = teams
     .map((team, index) => ({
       ...team,
-      win_percentage: team.matches_played > 0 
-        ? (team.wins / team.matches_played) * 100 
-        : 0,
+      win_percentage:
+        team.matches_played > 0 ? (team.wins / team.matches_played) * 100 : 0,
       rank: index + 1,
     }))
     .sort((a, b) => {
@@ -123,8 +126,7 @@ export default function StandingsDisplay({ teams, isLoading = false, format }: S
               </th>
               <th>Team</th>
               <th className="text-center">
-                <Trophy size={16} className="inline mr-1" />
-                W
+                <Trophy size={16} className="inline mr-1" />W
               </th>
               <th className="text-center">L</th>
               <th className="text-center">
@@ -138,24 +140,35 @@ export default function StandingsDisplay({ teams, isLoading = false, format }: S
           </thead>
           <tbody>
             {sortedTeams.map((team) => (
-              <tr key={team.team_id} className={team.rank <= 3 ? "font-semibold" : ""}>
-                <td className="text-center">
-                  {getRankBadge(team.rank)}
-                </td>
+              <tr
+                key={team.team_id}
+                className={team.rank <= 3 ? "font-semibold" : ""}
+              >
+                <td className="text-center">{getRankBadge(team.rank)}</td>
                 <td>
                   <div className="flex items-center gap-2">
                     {team.rank === 1 && (
                       <Trophy size={16} className="text-yellow-500" />
                     )}
-                    <span className={team.rank === 1 ? "text-primary font-bold" : ""}>
+                    <span
+                      className={
+                        team.rank === 1 ? "text-primary font-bold" : ""
+                      }
+                    >
                       {team.team_name}
                     </span>
                   </div>
                 </td>
-                <td className="text-center font-bold text-success">{team.wins}</td>
-                <td className="text-center text-base-content/70">{team.losses}</td>
+                <td className="text-center font-bold text-success">
+                  {team.wins}
+                </td>
+                <td className="text-center text-base-content/70">
+                  {team.losses}
+                </td>
                 <td className="text-center">
-                  <span className={`font-semibold ${getWinPercentageColor(team.win_percentage || 0)}`}>
+                  <span
+                    className={`font-semibold ${getWinPercentageColor(team.win_percentage || 0)}`}
+                  >
                     {(team.win_percentage || 0).toFixed(1)}%
                   </span>
                 </td>
@@ -167,8 +180,8 @@ export default function StandingsDisplay({ teams, isLoading = false, format }: S
                       team.point_differential > 0
                         ? "text-success"
                         : team.point_differential < 0
-                        ? "text-error"
-                        : ""
+                          ? "text-error"
+                          : ""
                     }`}
                   >
                     {team.point_differential > 0 ? "+" : ""}
@@ -216,7 +229,7 @@ export default function StandingsDisplay({ teams, isLoading = false, format }: S
                   <div className="text-xs text-base-content/70">Win %</div>
                   <div
                     className={`font-bold ${getWinPercentageColor(
-                      team.win_percentage || 0
+                      team.win_percentage || 0,
                     )}`}
                   >
                     {(team.win_percentage || 0).toFixed(0)}%
@@ -229,8 +242,8 @@ export default function StandingsDisplay({ teams, isLoading = false, format }: S
                       team.point_differential > 0
                         ? "text-success"
                         : team.point_differential < 0
-                        ? "text-error"
-                        : ""
+                          ? "text-error"
+                          : ""
                     }`}
                   >
                     {team.point_differential > 0 ? "+" : ""}
@@ -245,7 +258,8 @@ export default function StandingsDisplay({ teams, isLoading = false, format }: S
                   PF: <span className="font-semibold">{team.points_for}</span>
                 </span>
                 <span>
-                  PA: <span className="font-semibold">{team.points_against}</span>
+                  PA:{" "}
+                  <span className="font-semibold">{team.points_against}</span>
                 </span>
               </div>
             </div>

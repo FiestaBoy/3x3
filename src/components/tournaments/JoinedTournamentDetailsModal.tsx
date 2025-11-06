@@ -13,10 +13,10 @@ import {
   AlertCircle,
   LogOut,
 } from "lucide-react";
-import { withdrawFromTournament } from "@/src/lib/db/tournamentActions";
-import { getTournamentSchedule } from "@/src/lib/db/tournamentScheduler";
+import { withdrawFromTournament } from "@/src/lib/db/tournaments/tournamentActions";
+import { getTournamentSchedule } from "@/src/lib/db/tournaments/tournamentScheduler";
 import StandingsDisplay from "./StandingsDisplay";
-import { getTournamentStandings } from "@/src/lib/db/tournamentActions";
+import { getTournamentStandings } from "@/src/lib/db/tournaments/tournamentActions";
 import BracketVisualization from "./BracketVisualization";
 
 interface JoinedTournamentDetailsModalProps {
@@ -32,7 +32,9 @@ export default function JoinedTournamentDetailsModal({
   tournamentId,
   tournament,
 }: JoinedTournamentDetailsModalProps) {
-  const [activeTab, setActiveTab] = useState<"details" | "standings" | "bracket" | "schedule">("details");
+  const [activeTab, setActiveTab] = useState<
+    "details" | "standings" | "bracket" | "schedule"
+  >("details");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{
     type: "success" | "error";
@@ -95,9 +97,9 @@ export default function JoinedTournamentDetailsModal({
       if (result.success) {
         // Filter matches for this specific team
         const teamSpecificMatches = result.matches.filter(
-          (match: any) => 
-            match.team1_id === tournament.team_id || 
-            match.team2_id === tournament.team_id
+          (match: any) =>
+            match.team1_id === tournament.team_id ||
+            match.team2_id === tournament.team_id,
         );
         setTeamMatches(teamSpecificMatches);
       }
@@ -178,7 +180,9 @@ export default function JoinedTournamentDetailsModal({
           <div>
             <h3 className="font-bold text-2xl mb-2">{tournament.name}</h3>
             {tournament.team_name && (
-              <span className="badge badge-primary">Registered as: {tournament.team_name}</span>
+              <span className="badge badge-primary">
+                Registered as: {tournament.team_name}
+              </span>
             )}
           </div>
           <button
@@ -230,19 +234,24 @@ export default function JoinedTournamentDetailsModal({
 
         {/* Tab Content */}
         {activeTab === "details" && (
-          <DetailsTab tournament={tournament} formatDate={formatDate} formatDateTime={formatDateTime} formatTournamentFormat={formatTournamentFormat} />
+          <DetailsTab
+            tournament={tournament}
+            formatDate={formatDate}
+            formatDateTime={formatDateTime}
+            formatTournamentFormat={formatTournamentFormat}
+          />
         )}
 
         {activeTab === "standings" && (
-          <StandingsDisplay 
-            teams={standings} 
+          <StandingsDisplay
+            teams={standings}
             isLoading={isLoading}
             format={tournament.format}
           />
         )}
 
         {activeTab === "bracket" && (
-          <BracketTab 
+          <BracketTab
             matches={allMatches}
             tournament={tournament}
             isLoading={isLoading}
@@ -256,8 +265,8 @@ export default function JoinedTournamentDetailsModal({
         {/* Action Buttons */}
         <div className="modal-action">
           {canWithdraw() && (
-            <button 
-              className="btn btn-error" 
+            <button
+              className="btn btn-error"
               onClick={handleWithdraw}
               disabled={isLoading}
             >
@@ -265,7 +274,11 @@ export default function JoinedTournamentDetailsModal({
               Withdraw Team
             </button>
           )}
-          <button className="btn btn-ghost" onClick={onClose} disabled={isLoading}>
+          <button
+            className="btn btn-ghost"
+            onClick={onClose}
+            disabled={isLoading}
+          >
             Close
           </button>
         </div>
@@ -281,13 +294,20 @@ interface DetailsTabProps {
   formatTournamentFormat: (format: string) => string;
 }
 
-function DetailsTab({ tournament, formatDate, formatDateTime, formatTournamentFormat }: DetailsTabProps) {
+function DetailsTab({
+  tournament,
+  formatDate,
+  formatDateTime,
+  formatTournamentFormat,
+}: DetailsTabProps) {
   return (
     <div className="space-y-6">
       {tournament.description && (
         <div>
           <h4 className="font-semibold mb-2">About This Tournament</h4>
-          <p className="text-sm text-base-content/70">{tournament.description}</p>
+          <p className="text-sm text-base-content/70">
+            {tournament.description}
+          </p>
         </div>
       )}
 
@@ -328,7 +348,9 @@ function DetailsTab({ tournament, formatDate, formatDateTime, formatTournamentFo
       {tournament.venue_details && (
         <div className="bg-base-200 p-4 rounded-lg">
           <h4 className="font-semibold mb-2">Venue Information</h4>
-          <p className="text-sm text-base-content/70">{tournament.venue_details}</p>
+          <p className="text-sm text-base-content/70">
+            {tournament.venue_details}
+          </p>
         </div>
       )}
 
@@ -339,7 +361,10 @@ function DetailsTab({ tournament, formatDate, formatDateTime, formatTournamentFo
             {tournament.contact_email && (
               <div className="flex items-center gap-2 text-sm">
                 <Mail size={16} className="text-base-content/70" />
-                <a href={`mailto:${tournament.contact_email}`} className="link link-primary">
+                <a
+                  href={`mailto:${tournament.contact_email}`}
+                  className="link link-primary"
+                >
                   {tournament.contact_email}
                 </a>
               </div>
@@ -347,7 +372,10 @@ function DetailsTab({ tournament, formatDate, formatDateTime, formatTournamentFo
             {tournament.contact_phone && (
               <div className="flex items-center gap-2 text-sm">
                 <Phone size={16} className="text-base-content/70" />
-                <a href={`tel:${tournament.contact_phone}`} className="link link-primary">
+                <a
+                  href={`tel:${tournament.contact_phone}`}
+                  className="link link-primary"
+                >
                   {tournament.contact_phone}
                 </a>
               </div>
@@ -374,7 +402,9 @@ function InfoCard({ icon, label, value, subtitle }: InfoCardProps) {
         <span className="text-xs font-medium uppercase">{label}</span>
       </div>
       <p className="font-semibold">{value}</p>
-      {subtitle && <p className="text-xs text-base-content/70 mt-1">{subtitle}</p>}
+      {subtitle && (
+        <p className="text-xs text-base-content/70 mt-1">{subtitle}</p>
+      )}
     </div>
   );
 }
@@ -400,7 +430,8 @@ function BracketTab({ matches, tournament, isLoading }: BracketTabProps) {
         <Trophy size={48} className="mx-auto mb-4 text-base-content/50" />
         <h4 className="font-semibold mb-2">Tournament Bracket</h4>
         <p className="text-sm text-base-content/70">
-          The bracket will be available once the tournament starts and matches are scheduled.
+          The bracket will be available once the tournament starts and matches
+          are scheduled.
         </p>
       </div>
     );
@@ -452,7 +483,8 @@ function ScheduleTab({ matches, isLoading }: ScheduleTabProps) {
         <Calendar size={48} className="mx-auto mb-4 text-base-content/50" />
         <h4 className="font-semibold mb-2">No Matches Scheduled</h4>
         <p className="text-sm text-base-content/70">
-          Your team's match schedule will appear here once the organizer schedules the matches.
+          Your team's match schedule will appear here once the organizer
+          schedules the matches.
         </p>
       </div>
     );
@@ -479,7 +511,11 @@ function ScheduleTab({ matches, isLoading }: ScheduleTabProps) {
 
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className={match.winner_team_id === match.team1_id ? "font-bold" : ""}>
+                <span
+                  className={
+                    match.winner_team_id === match.team1_id ? "font-bold" : ""
+                  }
+                >
                   {match.team1_name}
                 </span>
                 {match.team1_score !== null && (
@@ -492,7 +528,11 @@ function ScheduleTab({ matches, isLoading }: ScheduleTabProps) {
               </div>
 
               <div className="flex justify-between items-center">
-                <span className={match.winner_team_id === match.team2_id ? "font-bold" : ""}>
+                <span
+                  className={
+                    match.winner_team_id === match.team2_id ? "font-bold" : ""
+                  }
+                >
                   {match.team2_name}
                 </span>
                 {match.team2_score !== null && (

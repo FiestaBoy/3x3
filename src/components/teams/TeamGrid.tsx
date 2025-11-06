@@ -1,4 +1,4 @@
-import getMyTeams from "@/src/lib/db/getMyTeams";
+import getMyTeams from "@/src/lib/db/teams/getMyTeams";
 import TeamCard from "./TeamCard";
 import Link from "next/link";
 
@@ -26,10 +26,16 @@ export default async function TeamGrid() {
                 No teams found. Get started by creating or joining a team!
               </p>
               <div className="flex gap-3 justify-center">
-                <Link href={"/teams/create"} className="btn btn-primary gap-2 shadow-lg hover:shadow-xl transition-all">
+                <Link
+                  href={"/teams/create"}
+                  className="btn btn-primary gap-2 shadow-lg hover:shadow-xl transition-all"
+                >
                   Create Team
                 </Link>
-                <Link href={"/teams/join"} className="btn btn-outline btn-secondary gap-2 hover:shadow-lg transition-all">
+                <Link
+                  href={"/teams/join"}
+                  className="btn btn-outline btn-secondary gap-2 hover:shadow-lg transition-all"
+                >
                   Join Team
                 </Link>
               </div>

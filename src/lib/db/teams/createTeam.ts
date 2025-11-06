@@ -6,7 +6,7 @@ import {
   confirmAgeGroup,
   duplicateTeamName,
   getUserSession,
-} from "./helpers";
+} from "../utils/helpers";
 
 const db = require("@/src/lib/db/db");
 

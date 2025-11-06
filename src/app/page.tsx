@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import LandingPage from "../components/landing/LandingPage";
-import { decrypt } from "../lib/session";
+import { decrypt } from "../lib/db/auth/session";
 
 export default async function page() {
   const cookie = (await cookies()).get("session")?.value;

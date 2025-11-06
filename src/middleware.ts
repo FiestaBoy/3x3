@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { decrypt } from "./lib/session";
+import { decrypt } from "./lib/db/auth/session";
 
 export const config = {
   matcher: ["/tournaments/:path*", "/teams/:path*", "/profile/:path*"],

@@ -1,7 +1,7 @@
 "use server";
 
 import { generateJoinCode } from "./createTeam";
-import { getUserSession } from "./helpers";
+import { getUserSession } from "../utils/helpers";
 import { revalidatePath } from "next/cache";
 
 const db = require("@/src/lib/db/db");

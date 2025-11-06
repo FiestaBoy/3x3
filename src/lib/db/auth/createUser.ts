@@ -2,7 +2,7 @@
 
 import { FormFields } from "@/src/components/auth/SignupForm";
 import bcrypt from "bcryptjs";
-import { emailInUse } from "./helpers";
+import { emailInUse } from "../utils/helpers";
 
 const db = require("@/src/lib/db/db");
 

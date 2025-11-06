@@ -1,8 +1,8 @@
 "use server";
 
 import { FormFields } from "@/src/components/auth/LoginForm";
-import { confirmLoginCredentials, LoginResult } from "./helpers";
-import { createSession } from "../session";
+import { confirmLoginCredentials, LoginResult } from "../utils/helpers";
+import { createSession } from "./session";
 
 type ReturnType = {
   success: boolean;

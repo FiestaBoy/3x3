@@ -2,7 +2,7 @@
 
 const db = require("@/src/lib/db/db");
 
-import { getUserSession } from "./helpers";
+import { getUserSession } from "../utils/helpers";
 import { ResultSetHeader, RowDataPacket } from "mysql2";
 import bcrypt from "bcryptjs";
 // import bcrypt from "bcrypt";
@@ -25,7 +25,7 @@ export async function getUserProfile() {
       `SELECT user_id, email, first_name, last_name, birthday, role, created_at 
        FROM users 
        WHERE user_id = ?`,
-      [session.userId]
+      [session.userId],
     );
 
     if (!Array.isArray(rows) || rows.length === 0) {
@@ -64,7 +64,7 @@ export async function updateUserProfile(data: {
     // Check if email is already taken by another user
     const existingUsers: { user_id: number }[] = await db.query(
       `SELECT user_id FROM users WHERE email = ? AND user_id != ?`,
-      [data.email, session.userId]
+      [data.email, session.userId],
     );
 
     if (Array.isArray(existingUsers) && existingUsers.length > 0) {
@@ -80,7 +80,13 @@ export async function updateUserProfile(data: {
       `UPDATE users 
        SET first_name = ?, last_name = ?, birthday = ?, email = ?, updated_at = NOW() 
        WHERE user_id = ?`,
-      [data.firstName, data.lastName, data.birthday, data.email, session.userId]
+      [
+        data.firstName,
+        data.lastName,
+        data.birthday,
+        data.email,
+        session.userId,
+      ],
     );
 
     return { success: true, message: "Profile updated successfully" };
@@ -104,7 +110,7 @@ export async function changePassword(data: {
     // Get current password hash
     const rows: { password_hash: string }[] = await db.query(
       `SELECT password_hash FROM users WHERE user_id = ?`,
-      [session.userId]
+      [session.userId],
     );
 
     if (!Array.isArray(rows) || rows.length === 0) {
@@ -120,7 +126,7 @@ export async function changePassword(data: {
     // Verify current password
     const isPasswordValid = await bcrypt.compare(
       data.currentPassword,
-      user.password_hash
+      user.password_hash,
     );
 
     if (!isPasswordValid) {
@@ -137,7 +143,7 @@ export async function changePassword(data: {
     // Update password
     await db.query(
       `UPDATE users SET password_hash = ?, updated_at = NOW() WHERE user_id = ?`,
-      [newPasswordHash, session.userId]
+      [newPasswordHash, session.userId],
     );
 
     return { success: true, message: "Password changed successfully" };

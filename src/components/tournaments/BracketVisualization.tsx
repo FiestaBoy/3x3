@@ -12,7 +12,9 @@ export default function BracketVisualization({
   matches,
   tournament,
 }: BracketVisualizationProps) {
-  const [collapsedRounds, setCollapsedRounds] = useState<Set<number>>(new Set());
+  const [collapsedRounds, setCollapsedRounds] = useState<Set<number>>(
+    new Set(),
+  );
 
   if (matches.length === 0) {
     return (
@@ -53,14 +55,21 @@ export default function BracketVisualization({
       <div
         key={match.game_id}
         className={`card bg-base-200 border-2 ${
-          isCompleted ? "border-success" : 
-          hasTeams ? "border-primary" : "border-base-300"
+          isCompleted
+            ? "border-success"
+            : hasTeams
+              ? "border-primary"
+              : "border-base-300"
         } mb-3`}
       >
         <div className="card-body p-3">
           <div className="flex justify-between items-center mb-2 text-xs">
-            <span className="text-base-content/70">Match {match.game_number}</span>
-            <span className="text-base-content/70">Court {match.court_number}</span>
+            <span className="text-base-content/70">
+              Match {match.game_number}
+            </span>
+            <span className="text-base-content/70">
+              Court {match.court_number}
+            </span>
           </div>
 
           {/* Team 1 */}
@@ -84,12 +93,16 @@ export default function BracketVisualization({
               )}
             </div>
             {isCompleted && match.team1_id && (
-              <span className="text-lg font-bold ml-2">{match.team1_score}</span>
+              <span className="text-lg font-bold ml-2">
+                {match.team1_score}
+              </span>
             )}
           </div>
 
           {/* VS Divider */}
-          <div className="text-center text-xs text-base-content/50 my-1">VS</div>
+          <div className="text-center text-xs text-base-content/50 my-1">
+            VS
+          </div>
 
           {/* Team 2 */}
           <div
@@ -112,7 +125,9 @@ export default function BracketVisualization({
               )}
             </div>
             {isCompleted && match.team2_id && (
-              <span className="text-lg font-bold ml-2">{match.team2_score}</span>
+              <span className="text-lg font-bold ml-2">
+                {match.team2_score}
+              </span>
             )}
           </div>
 
@@ -129,7 +144,7 @@ export default function BracketVisualization({
   const renderRound = (
     roundNumber: number,
     roundMatches: any[],
-    title: string
+    title: string,
   ) => {
     const isCollapsed = collapsedRounds.has(roundNumber);
 
@@ -174,12 +189,14 @@ export default function BracketVisualization({
           <Trophy size={20} />
           <div>
             <div className="font-semibold">Round Robin Format</div>
-            <div className="text-sm">Every team plays every other team once</div>
+            <div className="text-sm">
+              Every team plays every other team once
+            </div>
           </div>
         </div>
 
         {sortedRounds.map((round) =>
-          renderRound(round, rounds.get(round)!, `Round ${round}`)
+          renderRound(round, rounds.get(round)!, `Round ${round}`),
         )}
       </div>
     );

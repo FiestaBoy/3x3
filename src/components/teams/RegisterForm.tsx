@@ -1,6 +1,6 @@
 "use client";
 
-import { createTeam } from "@/src/lib/db/createTeam";
+import { createTeam } from "@/src/lib/db/teams/createTeam";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState } from "react";

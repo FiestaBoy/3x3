@@ -1,7 +1,7 @@
 "use server";
 
 import { createTeamMember } from "./createTeam";
-import { confirmAgeGroup, getUserSession, isFullTeam } from "./helpers";
+import { confirmAgeGroup, getUserSession, isFullTeam } from "../utils/helpers";
 
 const db = require("@/src/lib/db/db");
 

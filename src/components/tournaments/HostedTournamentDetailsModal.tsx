@@ -21,15 +21,21 @@ import {
   Edit3,
   Lock,
   Unlock,
-  UserX
+  UserX,
 } from "lucide-react";
-import { getTournamentTeams, regenerateTournamentJoinCode, deleteTournament, updateTournamentSettings, removeTournamentTeam } from "@/src/lib/db/tournamentActions";
+import {
+  getTournamentTeams,
+  regenerateTournamentJoinCode,
+  deleteTournament,
+  updateTournamentSettings,
+  removeTournamentTeam,
+} from "@/src/lib/db/tournaments/tournamentActions";
 import ScheduleMatchesModal from "./ScheduleMatchesModal";
 import BracketVisualization from "./BracketVisualization";
 import MatchManagement from "./MatchManagement";
-import { getTournamentSchedule } from "@/src/lib/db/tournamentScheduler";
+import { getTournamentSchedule } from "@/src/lib/db/tournaments/tournamentScheduler";
 import StandingsDisplay from "./StandingsDisplay";
-import { getTournamentStandings } from "@/src/lib/db/tournamentActions";
+import { getTournamentStandings } from "@/src/lib/db/tournaments/tournamentActions";
 
 interface HostedTournamentDetailsModalProps {
   isOpen: boolean;
@@ -44,7 +50,9 @@ export default function HostedTournamentDetailsModal({
   tournamentId,
   tournament,
 }: HostedTournamentDetailsModalProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "teams" | "standings" | "matches" | "bracket" | "settings">("overview");
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "teams" | "standings" | "matches" | "bracket" | "settings"
+  >("overview");
   const [teams, setTeams] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -193,7 +201,9 @@ export default function HostedTournamentDetailsModal({
               <h3 className="font-bold text-2xl mb-2">{tournament.name}</h3>
               <div className="flex gap-2">
                 {tournament.is_private === 1 && (
-                  <span className="badge badge-secondary">Private Tournament</span>
+                  <span className="badge badge-secondary">
+                    Private Tournament
+                  </span>
                 )}
                 <span className="badge badge-outline">Organizer View</span>
               </div>
@@ -210,7 +220,9 @@ export default function HostedTournamentDetailsModal({
           {tournament.is_private === 1 && currentJoinCode && (
             <div className="alert mb-4 bg-primary/10 border border-primary">
               <div className="flex-1">
-                <div className="text-sm font-semibold mb-2">Tournament Join Code</div>
+                <div className="text-sm font-semibold mb-2">
+                  Tournament Join Code
+                </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <code className="text-lg font-mono bg-base-100 px-4 py-2 rounded border-2 border-primary">
                     {currentJoinCode}
@@ -228,7 +240,10 @@ export default function HostedTournamentDetailsModal({
                     onClick={handleRegenerateJoinCode}
                     disabled={isLoading}
                   >
-                    <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
+                    <RefreshCw
+                      size={16}
+                      className={isLoading ? "animate-spin" : ""}
+                    />
                     Regenerate
                   </button>
                 </div>
@@ -293,28 +308,33 @@ export default function HostedTournamentDetailsModal({
 
           {/* Tab Content */}
           {activeTab === "overview" && (
-            <OverviewTab 
-              tournament={tournament} 
-              formatDate={formatDate} 
-              formatDateTime={formatDateTime} 
-              formatTournamentFormat={formatTournamentFormat} 
+            <OverviewTab
+              tournament={tournament}
+              formatDate={formatDate}
+              formatDateTime={formatDateTime}
+              formatTournamentFormat={formatTournamentFormat}
             />
           )}
 
           {activeTab === "teams" && (
-            <TeamsTab teams={teams} isLoading={isLoading} tournamentId={tournamentId} onUpdate={loadTeams} />
+            <TeamsTab
+              teams={teams}
+              isLoading={isLoading}
+              tournamentId={tournamentId}
+              onUpdate={loadTeams}
+            />
           )}
 
           {activeTab === "standings" && (
-            <StandingsDisplay 
-              teams={standings} 
+            <StandingsDisplay
+              teams={standings}
               isLoading={isLoading}
               format={tournament.format}
             />
           )}
 
           {activeTab === "matches" && (
-            <MatchesTab 
+            <MatchesTab
               tournament={tournament}
               matches={matches}
               scheduleGenerated={scheduleGenerated}
@@ -325,8 +345,8 @@ export default function HostedTournamentDetailsModal({
           )}
 
           {activeTab === "bracket" && (
-            <BracketTab 
-              tournament={tournament} 
+            <BracketTab
+              tournament={tournament}
               matches={matches}
               scheduleGenerated={scheduleGenerated}
               onScheduleClick={() => setShowScheduleModal(true)}
@@ -335,8 +355,8 @@ export default function HostedTournamentDetailsModal({
           )}
 
           {activeTab === "settings" && (
-            <SettingsTab 
-              tournament={tournament} 
+            <SettingsTab
+              tournament={tournament}
               onClose={onClose}
               onUpdate={() => {
                 // Reload tournament data
@@ -377,13 +397,20 @@ interface OverviewTabProps {
   formatTournamentFormat: (format: string) => string;
 }
 
-function OverviewTab({ tournament, formatDate, formatDateTime, formatTournamentFormat }: OverviewTabProps) {
+function OverviewTab({
+  tournament,
+  formatDate,
+  formatDateTime,
+  formatTournamentFormat,
+}: OverviewTabProps) {
   return (
     <div className="space-y-6">
       {tournament.description && (
         <div>
           <h4 className="font-semibold mb-2">Tournament Description</h4>
-          <p className="text-sm text-base-content/70">{tournament.description}</p>
+          <p className="text-sm text-base-content/70">
+            {tournament.description}
+          </p>
         </div>
       )}
 
@@ -429,11 +456,15 @@ function OverviewTab({ tournament, formatDate, formatDateTime, formatTournamentF
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-base-content/70">Opens:</span>
-            <span className="font-medium">{formatDateTime(tournament.registration_start)}</span>
+            <span className="font-medium">
+              {formatDateTime(tournament.registration_start)}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-base-content/70">Closes:</span>
-            <span className="font-medium">{formatDateTime(tournament.registration_end)}</span>
+            <span className="font-medium">
+              {formatDateTime(tournament.registration_end)}
+            </span>
           </div>
         </div>
       </div>
@@ -456,7 +487,9 @@ function InfoCard({ icon, label, value, subtitle }: InfoCardProps) {
         <span className="text-xs font-medium uppercase">{label}</span>
       </div>
       <p className="font-semibold break-words">{value}</p>
-      {subtitle && <p className="text-xs text-base-content/70 mt-1">{subtitle}</p>}
+      {subtitle && (
+        <p className="text-xs text-base-content/70 mt-1">{subtitle}</p>
+      )}
     </div>
   );
 }
@@ -490,9 +523,12 @@ function TeamsTab({ teams, isLoading, tournamentId, onUpdate }: TeamsTabProps) {
     setRemovingTeamId(teamId);
     try {
       const result = await removeTournamentTeam(tournamentId, teamId);
-      
+
       if (result.success) {
-        showMessage("success", `${teamName} has been removed from the tournament`);
+        showMessage(
+          "success",
+          `${teamName} has been removed from the tournament`,
+        );
         setConfirmRemove(null);
         onUpdate();
       } else {
@@ -580,7 +616,9 @@ function TeamsTab({ teams, isLoading, tournamentId, onUpdate }: TeamsTabProps) {
                       </button>
                       <button
                         className="btn btn-xs btn-error"
-                        onClick={() => handleRemoveTeam(team.team_id, team.name)}
+                        onClick={() =>
+                          handleRemoveTeam(team.team_id, team.name)
+                        }
                         disabled={removingTeamId === team.team_id}
                       >
                         {removingTeamId === team.team_id ? (
@@ -615,8 +653,9 @@ function TeamsTab({ teams, isLoading, tournamentId, onUpdate }: TeamsTabProps) {
         <AlertTriangle size={20} />
         <div>
           <p className="text-sm">
-            <strong>Note:</strong> Teams can only be removed before they start playing matches.
-            Removing a team will cancel all their scheduled games.
+            <strong>Note:</strong> Teams can only be removed before they start
+            playing matches. Removing a team will cancel all their scheduled
+            games.
           </p>
         </div>
       </div>
@@ -633,7 +672,14 @@ interface MatchesTabProps {
   isLoading: boolean;
 }
 
-function MatchesTab({ tournament, matches, scheduleGenerated, onScheduleClick, onUpdate, isLoading }: MatchesTabProps) {
+function MatchesTab({
+  tournament,
+  matches,
+  scheduleGenerated,
+  onScheduleClick,
+  onUpdate,
+  isLoading,
+}: MatchesTabProps) {
   const canStartTournament = () => {
     const registeredTeams = tournament.registered_teams || 0;
     return registeredTeams >= 4;
@@ -709,7 +755,13 @@ interface BracketTabProps {
   isLoading: boolean;
 }
 
-function BracketTab({ tournament, matches, scheduleGenerated, onScheduleClick, isLoading }: BracketTabProps) {
+function BracketTab({
+  tournament,
+  matches,
+  scheduleGenerated,
+  onScheduleClick,
+  isLoading,
+}: BracketTabProps) {
   const canStartTournament = () => {
     const registeredTeams = tournament.registered_teams || 0;
     return registeredTeams >= 4;
@@ -740,9 +792,12 @@ function BracketTab({ tournament, matches, scheduleGenerated, onScheduleClick, i
 
         <div className="bg-base-200 p-8 rounded-lg text-center">
           <Trophy size={48} className="mx-auto mb-4 text-base-content/50" />
-          <h4 className="font-semibold mb-2">Tournament Bracket & Match Scheduling</h4>
+          <h4 className="font-semibold mb-2">
+            Tournament Bracket & Match Scheduling
+          </h4>
           <p className="text-sm text-base-content/70 mb-4">
-            Generate a complete tournament schedule with automatic bracket creation and time assignments.
+            Generate a complete tournament schedule with automatic bracket
+            creation and time assignments.
           </p>
           <button
             className="btn btn-primary"
@@ -822,13 +877,19 @@ function SettingsTab({ tournament, onClose, onUpdate }: SettingsTabProps) {
 
   const handleSave = async () => {
     if (!canEdit) {
-      showMessage("error", "Cannot edit tournament after schedule is generated");
+      showMessage(
+        "error",
+        "Cannot edit tournament after schedule is generated",
+      );
       return;
     }
 
     setIsSaving(true);
     try {
-      const result = await updateTournamentSettings(tournament.tournament_id, formData);
+      const result = await updateTournamentSettings(
+        tournament.tournament_id,
+        formData,
+      );
 
       if (result.success) {
         showMessage("success", result.message);
@@ -928,8 +989,8 @@ function SettingsTab({ tournament, onClose, onUpdate }: SettingsTabProps) {
           <div>
             <h4 className="font-semibold">Settings Locked</h4>
             <p className="text-sm">
-              Tournament settings cannot be modified after the schedule has been generated
-              or teams have registered.
+              Tournament settings cannot be modified after the schedule has been
+              generated or teams have registered.
             </p>
           </div>
         </div>
@@ -1426,7 +1487,8 @@ function SettingsTab({ tournament, onClose, onUpdate }: SettingsTabProps) {
                 <div>
                   <p className="font-semibold">Are you absolutely sure?</p>
                   <p className="text-sm">
-                    This will permanently delete the tournament and all associated data.
+                    This will permanently delete the tournament and all
+                    associated data.
                   </p>
                 </div>
               </div>

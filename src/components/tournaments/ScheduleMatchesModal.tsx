@@ -1,8 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { X, Calendar, Clock, MapPin, AlertCircle, CheckCircle, Info } from "lucide-react";
-import { generateTournamentSchedule } from "@/src/lib/db/tournamentScheduler";
+import {
+  X,
+  Calendar,
+  Clock,
+  MapPin,
+  AlertCircle,
+  CheckCircle,
+  Info,
+} from "lucide-react";
+import { generateTournamentSchedule } from "@/src/lib/db/tournaments/tournamentScheduler";
 
 interface ScheduleMatchesModalProps {
   isOpen: boolean;
@@ -41,8 +49,13 @@ export default function ScheduleMatchesModal({
     message: string;
     details?: any;
   } | null>(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [existingMatchCount, setExistingMatchCount] = useState(0);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (
+    e: React.FormEvent,
+    confirmed: boolean = false,
+  ) => {
     e.preventDefault();
     setIsGenerating(true);
     setResult(null);
@@ -69,7 +82,16 @@ export default function ScheduleMatchesModal({
         breakDurationMinutes: formData.breakDurationMinutes,
         dailyStartTime: formData.dailyStartTime,
         dailyEndTime: formData.dailyEndTime,
+        confirmRegenerate: confirmed,
       });
+
+      // Check if confirmation is required
+      if (response.requiresConfirmation) {
+        setExistingMatchCount(response.existingMatchCount || 0);
+        setShowConfirmation(true);
+        setIsGenerating(false);
+        return;
+      }
 
       if (response.success) {
         setResult({
@@ -96,7 +118,10 @@ export default function ScheduleMatchesModal({
     } catch (error) {
       setResult({
         type: "error",
-        message: error instanceof Error ? error.message : "Failed to generate schedule",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to generate schedule",
       });
     } finally {
       setIsGenerating(false);
@@ -123,6 +148,53 @@ export default function ScheduleMatchesModal({
 
   if (!isOpen) return null;
 
+  // Confirmation Dialog
+  if (showConfirmation) {
+    return (
+      <div className="modal modal-open">
+        <div className="modal-box">
+          <h3 className="font-bold text-lg mb-4">
+            Confirm Schedule Regeneration
+          </h3>
+          <div className="alert alert-warning mb-4">
+            <AlertCircle size={20} />
+            <div>
+              <p className="font-semibold">
+                This tournament already has {existingMatchCount} scheduled
+                matches.
+              </p>
+              <p className="text-sm mt-1">
+                Regenerating will permanently delete all existing matches,
+                including any results.
+              </p>
+            </div>
+          </div>
+          <p className="text-sm mb-6">Are you sure you want to continue?</p>
+          <div className="flex justify-end gap-2">
+            <button
+              className="btn btn-ghost"
+              onClick={() => {
+                setShowConfirmation(false);
+                setIsGenerating(false);
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              className="btn btn-warning"
+              onClick={(e) => {
+                setShowConfirmation(false);
+                handleSubmit(e, true);
+              }}
+            >
+              Yes, Regenerate Schedule
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="modal modal-open">
       <div className="modal-box w-11/12 max-w-2xl">
@@ -130,7 +202,9 @@ export default function ScheduleMatchesModal({
         <div className="flex justify-between items-start mb-6">
           <div>
             <h3 className="font-bold text-xl">Generate Tournament Schedule</h3>
-            <p className="text-sm text-base-content/70 mt-1">{tournament.name}</p>
+            <p className="text-sm text-base-content/70 mt-1">
+              {tournament.name}
+            </p>
           </div>
           <button
             className="btn btn-sm btn-circle btn-ghost"
@@ -147,8 +221,13 @@ export default function ScheduleMatchesModal({
           <div className="text-sm">
             <div className="font-semibold mb-2">Tournament Information</div>
             <div className="space-y-1 text-xs opacity-80">
-              <div>• Start Date: {new Date(tournament.start_date).toLocaleDateString()}</div>
-              <div>• End Date: {new Date(tournament.end_date).toLocaleDateString()}</div>
+              <div>
+                • Start Date:{" "}
+                {new Date(tournament.start_date).toLocaleDateString()}
+              </div>
+              <div>
+                • End Date: {new Date(tournament.end_date).toLocaleDateString()}
+              </div>
               <div>• Duration: {getNumberOfDays()} day(s)</div>
               <div>• Game Duration: {tournament.game_duration} minutes</div>
             </div>
@@ -157,7 +236,6 @@ export default function ScheduleMatchesModal({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
-
           {/* Court & Venue Settings */}
           <div className="card bg-base-200">
             <div className="card-body p-4">
@@ -177,7 +255,10 @@ export default function ScheduleMatchesModal({
                   className="input input-bordered input-sm"
                   value={formData.numberOfCourts}
                   onChange={(e) =>
-                    handleInputChange("numberOfCourts", parseInt(e.target.value))
+                    handleInputChange(
+                      "numberOfCourts",
+                      parseInt(e.target.value),
+                    )
                   }
                   required
                 />
@@ -211,14 +292,19 @@ export default function ScheduleMatchesModal({
                     className="input input-bordered input-sm flex-1"
                     value={formData.breakDurationMinutes}
                     onChange={(e) =>
-                      handleInputChange("breakDurationMinutes", parseInt(e.target.value))
+                      handleInputChange(
+                        "breakDurationMinutes",
+                        parseInt(e.target.value),
+                      )
                     }
                     required
                   />
                   <span className="text-sm">minutes</span>
                 </div>
                 <label className="label">
-                  <span className="label-text-alt">Time buffer between games on the same court</span>
+                  <span className="label-text-alt">
+                    Time buffer between games on the same court
+                  </span>
                 </label>
               </div>
             </div>
@@ -241,7 +327,9 @@ export default function ScheduleMatchesModal({
                     type="time"
                     className="input input-bordered input-sm"
                     value={formData.dailyStartTime}
-                    onChange={(e) => handleInputChange("dailyStartTime", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("dailyStartTime", e.target.value)
+                    }
                     required
                   />
                 </div>
@@ -254,13 +342,17 @@ export default function ScheduleMatchesModal({
                     type="time"
                     className="input input-bordered input-sm"
                     value={formData.dailyEndTime}
-                    onChange={(e) => handleInputChange("dailyEndTime", e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("dailyEndTime", e.target.value)
+                    }
                     required
                   />
                 </div>
               </div>
               <label className="label">
-                <span className="label-text-alt">When the venue is available each day</span>
+                <span className="label-text-alt">
+                  When the venue is available each day
+                </span>
               </label>
             </div>
           </div>
@@ -284,7 +376,8 @@ export default function ScheduleMatchesModal({
                     <div>✓ {result.details.totalMatches} matches scheduled</div>
                     <div>✓ {result.details.daysUsed} day(s) used</div>
                     <div>
-                      ✓ Completes: {formatEstimatedEndTime(result.details.estimatedEndTime)}
+                      ✓ Completes:{" "}
+                      {formatEstimatedEndTime(result.details.estimatedEndTime)}
                     </div>
                   </div>
                 )}
@@ -302,7 +395,11 @@ export default function ScheduleMatchesModal({
             >
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary" disabled={isGenerating}>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={isGenerating}
+            >
               {isGenerating ? (
                 <>
                   <span className="loading loading-spinner loading-sm"></span>

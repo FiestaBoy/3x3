@@ -1,5 +1,5 @@
 import ProfilePage from "@/src/components/profile/ProfilePage";
-import { getUserProfile } from "@/src/lib/db/userSettings";
+import { getUserProfile } from "@/src/lib/db/users/userSettings";
 import { redirect } from "next/navigation";
 
 export default async function Page() {

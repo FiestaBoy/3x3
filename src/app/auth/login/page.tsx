@@ -19,9 +19,7 @@ export default function page() {
         <div className="card w-full shadow-2xl bg-base-100 border border-base-300 hover:shadow-3xl transition-all">
           <div className="card-body">
             <div className="text-center mb-6">
-              <h2 className="font-bold text-2xl">
-                Login to Your Account
-              </h2>
+              <h2 className="font-bold text-2xl">Login to Your Account</h2>
             </div>
             <Form />
           </div>

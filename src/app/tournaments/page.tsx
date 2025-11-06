@@ -1,6 +1,10 @@
 import Link from "next/link";
-import { getTournaments, getJoinedTournaments, getHostedTournaments } from "@/src/lib/db/tournamentActions";
-import TournamentCard from "@/src/components/tournaments/PublicTournamentCard";
+import {
+  getTournaments,
+  getJoinedTournaments,
+  getHostedTournaments,
+} from "@/src/lib/db/tournaments/tournamentActions";
+import PublicTournamentCard from "@/src/components/tournaments/PublicTournamentCard";
 import JoinedTournamentCard from "@/src/components/tournaments/JoinedTournamentCard";
 import HostedTournamentCard from "@/src/components/tournaments/HostedTournamentCard";
 
@@ -14,7 +18,9 @@ export default async function Page() {
       <div className="max-w-7xl mx-auto">
         {/* Header Section */}
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Tournaments</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4 bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+            Tournaments
+          </h1>
           <p className="text-lg text-base-content/70 mb-6">
             Browse upcoming 3x3 basketball tournaments or create your own
           </p>
@@ -70,42 +76,50 @@ export default async function Page() {
         </div>
 
         {/* Joined Tournaments Section */}
-        {joinedResponse.success && joinedResponse.tournaments && joinedResponse.tournaments.length > 0 && (
-          <>
-            <div className="divider">JOINED TOURNAMENTS</div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {joinedResponse.tournaments.map((tournament: any, index: any) => (
-                <JoinedTournamentCard
-                  key={`${tournament.name}-${index}`}
-                  tournament={tournament}
-                />
-              ))}
-            </div>
-          </>
-        )}
+        {joinedResponse.success &&
+          joinedResponse.tournaments &&
+          joinedResponse.tournaments.length > 0 && (
+            <>
+              <div className="divider">JOINED TOURNAMENTS</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                {joinedResponse.tournaments.map(
+                  (tournament: any, index: any) => (
+                    <JoinedTournamentCard
+                      key={`${tournament.name}-${index}`}
+                      tournament={tournament}
+                    />
+                  ),
+                )}
+              </div>
+            </>
+          )}
 
         {/* Hosted Tournaments Section */}
-        {hostedResponse.success && hostedResponse.tournaments && hostedResponse.tournaments.length > 0 && (
-          <>
-            <div className="divider">HOSTED TOURNAMENTS</div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {hostedResponse.tournaments.map((tournament: any) => (
-                <HostedTournamentCard
-                  key={tournament.tournament_id}
-                  tournament={tournament}
-                />
-              ))}
-            </div>
-          </>
-        )}
+        {hostedResponse.success &&
+          hostedResponse.tournaments &&
+          hostedResponse.tournaments.length > 0 && (
+            <>
+              <div className="divider">HOSTED TOURNAMENTS</div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                {hostedResponse.tournaments.map((tournament: any) => (
+                  <HostedTournamentCard
+                    key={tournament.tournament_id}
+                    tournament={tournament}
+                  />
+                ))}
+              </div>
+            </>
+          )}
 
         {/* Public Tournaments Section */}
         <div className="divider">PUBLIC TOURNAMENTS</div>
 
-        {publicResponse.success && publicResponse.tournaments && publicResponse.tournaments.length > 0 ? (
+        {publicResponse.success &&
+        publicResponse.tournaments &&
+        publicResponse.tournaments.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {publicResponse.tournaments.map((tournament: any) => (
-              <TournamentCard
+              <PublicTournamentCard
                 key={tournament.tournament_id}
                 tournament={tournament}
               />
@@ -130,7 +144,8 @@ export default async function Page() {
               </svg>
               <h3 className="text-2xl font-bold mb-2">No Public Tournaments</h3>
               <p className="text-muted-foreground mb-6">
-                There are currently no public tournaments available. Be the first to create one!
+                There are currently no public tournaments available. Be the
+                first to create one!
               </p>
               <Link href="/tournaments/create">
                 <button className="btn btn-primary">Create Tournament</button>

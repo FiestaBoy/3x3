@@ -1,6 +1,9 @@
 import JoinTournamentForm from "@/src/components/tournaments/JoinTournamentForm";
-import { getCaptainTeamNames, getUserSession } from "@/src/lib/db/helpers";
-import { joinTournament } from "@/src/lib/db/joinTournament";
+import {
+  getCaptainTeamNames,
+  getUserSession,
+} from "@/src/lib/db/utils/helpers";
+import { joinTournament } from "@/src/lib/db/tournaments/joinTournament";
 import { Trophy, Lock } from "lucide-react";
 
 import { redirect } from "next/navigation";
@@ -14,7 +17,11 @@ export default async function Page() {
     "use server";
     const { joinCode, teamId } = payload ?? {};
     if (!joinCode || !teamId) {
-      return { success: false, field: "joinCode", message: "Missing join code or team" };
+      return {
+        success: false,
+        field: "joinCode",
+        message: "Missing join code or team",
+      };
     }
 
     const result = await joinTournament(String(joinCode), String(teamId));

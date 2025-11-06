@@ -6,7 +6,7 @@ import {
   getAgeGroupMinBirthdays,
 } from "@/src/app/constants/ageGroups";
 import { cookies } from "next/headers";
-import { decrypt } from "../session";
+import { decrypt } from "../auth/session";
 
 type LoginSuccess = { success: true; userId: number; role: string };
 type LoginFailure = { success: false };
@@ -128,7 +128,9 @@ export async function isFullTeam(teamId: string) {
   return response[0].member_count >= 4;
 }
 
-export async function getCaptainTeamNames(userId?: string): Promise<{ team_id: string; name: string }[]> {
+export async function getCaptainTeamNames(
+  userId?: string,
+): Promise<{ team_id: string; name: string }[]> {
   try {
     if (!userId) {
       const session = await getUserSession();
@@ -136,7 +138,10 @@ export async function getCaptainTeamNames(userId?: string): Promise<{ team_id: s
     }
 
     const sql = "SELECT team_id, name FROM teams WHERE captain_id = ?";
-    const rows: { team_id: number | string; name: string }[] = await db.query(sql, [userId]);
+    const rows: { team_id: number | string; name: string }[] = await db.query(
+      sql,
+      [userId],
+    );
 
     if (!Array.isArray(rows) || rows.length === 0) return [];
     return rows.map((r) => ({ team_id: String(r.team_id), name: r.name }));

@@ -1,6 +1,6 @@
 "use client";
 
-import { loginUser } from "@/src/lib/db/loginUser";
+import { loginUser } from "@/src/lib/db/auth/loginUser";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -85,7 +85,7 @@ export default function Form() {
           "Sign In"
         )}
       </button>
-      
+
       {rootMessage && (
         <div className="alert alert-error shadow-lg">
           <span>{rootMessage}</span>
