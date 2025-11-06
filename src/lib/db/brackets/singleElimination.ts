@@ -89,12 +89,6 @@ export function generateSingleEliminationBracket(
   const bracketSize = nextPowerOf2(teams.length);
   const totalRounds = Math.log2(bracketSize);
 
-  console.log(
-    `Generating single elimination bracket for ${teams.length} teams`,
-  );
-  console.log(`Total matches needed: ${totalMatchesNeeded}`);
-  console.log(`Bracket size: ${bracketSize}, Total rounds: ${totalRounds}`);
-
   // Generate first round pairings with byes
   const firstRoundPairings = generateSeedPairings(teams);
 
@@ -144,10 +138,6 @@ export function generateSingleEliminationBracket(
 
   roundMatches.set(1, firstRoundMatchIds);
 
-  console.log(
-    `Round 1: ${firstRoundMatchIds.length} matches, ${byeTeams.length} teams with byes`,
-  );
-
   /**
    * Generate subsequent rounds
    * Only create as many matches as needed to reach n-1 total
@@ -160,10 +150,6 @@ export function generateSingleEliminationBracket(
     const matchesInRound = Math.floor(teamsInCurrentRound / 2);
     const nextRoundTeams = matchesInRound;
     const isFinals = nextRoundTeams === 1;
-
-    console.log(
-      `Round ${currentRound}: ${teamsInCurrentRound} teams → ${matchesInRound} matches (Finals: ${isFinals})`,
-    );
 
     const currentRoundMatchIds: number[] = [];
     const previousRoundMatchIds = roundMatches.get(currentRound - 1) || [];
@@ -219,15 +205,8 @@ export function generateSingleEliminationBracket(
             const parentMatch = matches.find((m) => m.gameId === parentMatchId);
             if (parentMatch) {
               parentMatch.childMatchId = currentMatchId;
-              console.log(
-                `  ✓ Linked R1 match ${parentMatchId} → R2 match ${currentMatchId} (slot for winner)`,
-              );
             }
           }
-        } else {
-          console.log(
-            `  ○ R2 match ${currentMatchId} filled with bye teams, no R1 parent needed`,
-          );
         }
       } else {
         // For rounds 3+, standard pairing: two parent matches per child
@@ -256,10 +235,6 @@ export function generateSingleEliminationBracket(
     teamsInCurrentRound = matchesInRound;
     currentRound++;
   }
-
-  console.log(
-    `✓ Generated ${matches.length} matches (expected ${totalMatchesNeeded})`,
-  );
 
   return matches;
 }

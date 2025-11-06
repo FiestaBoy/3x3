@@ -76,11 +76,6 @@ export async function generateTournamentSchedule(
   params: ScheduleGenerationParams,
 ): Promise<ScheduleGenerationResult> {
   try {
-    console.log(
-      "Starting tournament schedule generation:",
-      params.tournamentId,
-    );
-
     // Step 1: Fetch tournament details
     const tournament = await getTournamentDetails(params.tournamentId);
     if (!tournament) {
@@ -120,7 +115,6 @@ export async function generateTournamentSchedule(
       }
 
       // User confirmed - delete existing schedule
-      console.log(`Deleting ${existingMatches[0].count} existing matches...`);
       const deleteResult = await deleteTournamentSchedule(
         params.tournamentId,
         true,
@@ -143,8 +137,6 @@ export async function generateTournamentSchedule(
         message: `Insufficient teams. Need at least 4 teams, currently have ${teams.length}.`,
       };
     }
-
-    console.log(`Found ${teams.length} registered teams`);
 
     // Step 5: Calculate tournament duration from start_date and end_date
     const startDate = new Date(tournament.start_date);
@@ -203,8 +195,6 @@ export async function generateTournamentSchedule(
         };
     }
 
-    console.log(`Generated ${bracketMatches.length} matches for bracket`);
-
     // Step 9: Check if tournament duration is sufficient
     const estimation = scheduler.estimateTournamentDuration(
       bracketMatches.length,
@@ -219,8 +209,6 @@ export async function generateTournamentSchedule(
     // Step 10: Schedule matches with times and courts
     const scheduledMatches = scheduler.scheduleMatches(bracketMatches);
 
-    console.log(`Scheduled ${scheduledMatches.length} matches`);
-
     // Step 11: Save to database with proper binary tree structure
     await saveScheduleToDatabase(params.tournamentId, scheduledMatches);
 
@@ -232,7 +220,6 @@ export async function generateTournamentSchedule(
       daysUsed: estimation.totalDaysUsed,
     };
   } catch (error) {
-    console.error("Error generating tournament schedule:", error);
     return {
       success: false,
       message:
@@ -313,14 +300,10 @@ async function saveScheduleToDatabase(
   tournamentId: string,
   matches: ScheduledMatch[],
 ): Promise<void> {
-  console.log("\n=== SAVING SCHEDULE TO DATABASE ===\n");
-
   // Map to store gameId (from bracket generator) to database game_id
   const gameIdToDbId = new Map<number, number>();
 
   // First pass: Insert all matches and build the mapping
-  console.log("📝 FIRST PASS: Inserting matches...\n");
-
   for (const match of matches) {
     const team1Id =
       match.team1Id === null || match.team1Id === -1 ? null : match.team1Id;
@@ -364,25 +347,10 @@ async function saveScheduleToDatabase(
     // Map the bracket's gameId to database game_id
     if (match.gameId) {
       gameIdToDbId.set(match.gameId, dbGameId);
-      console.log(
-        `✅ Inserted match: bracket gameId=${match.gameId} → DB game_id=${dbGameId}`,
-      );
-      console.log(
-        `   Round ${match.roundNumber}, Game ${match.gameNumber}, Teams: ${team1Id} vs ${team2Id}`,
-      );
-    } else {
-      console.warn(
-        `⚠️  Match has no gameId! Round ${match.roundNumber}, Game ${match.gameNumber}`,
-      );
     }
   }
 
-  console.log(`\n📊 Total matches inserted: ${matches.length}`);
-  console.log(`📊 GameId mappings created: ${gameIdToDbId.size}\n`);
-
   // Second pass: Update parent and child relationships (only for single elimination)
-  console.log("🔗 SECOND PASS: Setting up parent-child relationships...\n");
-
   let relationshipsSet = 0;
 
   for (const match of matches) {
@@ -390,7 +358,6 @@ async function saveScheduleToDatabase(
 
     const dbGameId = gameIdToDbId.get(match.gameId);
     if (!dbGameId) {
-      console.warn(`⚠️  No DB ID found for bracket gameId ${match.gameId}`);
       continue;
     }
 
@@ -400,21 +367,11 @@ async function saveScheduleToDatabase(
     // Convert bracket parentMatchId to database parent_match_id
     if (match.parentMatchId) {
       parentDbId = gameIdToDbId.get(match.parentMatchId);
-      if (!parentDbId) {
-        console.warn(
-          `⚠️  Parent bracket gameId ${match.parentMatchId} not found in DB mapping`,
-        );
-      }
     }
 
     // Convert bracket childMatchId to database child_match_id
     if (match.childMatchId) {
       childDbId = gameIdToDbId.get(match.childMatchId);
-      if (!childDbId) {
-        console.warn(
-          `⚠️  Child bracket gameId ${match.childMatchId} not found in DB mapping`,
-        );
-      }
     }
 
     // Update the match with relationship IDs
@@ -427,17 +384,8 @@ async function saveScheduleToDatabase(
       );
 
       relationshipsSet++;
-      console.log(`🔗 Match ${dbGameId}:`);
-      console.log(`   parent_match_id = ${parentDbId || "NULL"}`);
-      console.log(`   child_match_id = ${childDbId || "NULL"}`);
     }
   }
-
-  console.log(`\n✅ Relationships set: ${relationshipsSet} matches updated`);
-  console.log(
-    `✅ Saved ${matches.length} matches to database with binary tree structure\n`,
-  );
-  console.log("=== SCHEDULE SAVE COMPLETE ===\n");
 }
 
 /**
@@ -468,7 +416,6 @@ export async function getTournamentSchedule(tournamentId: string): Promise<{
       matches: matches || [],
     };
   } catch (error) {
-    console.error("Error fetching tournament schedule:", error);
     return {
       success: false,
       matches: [],
@@ -516,7 +463,6 @@ export async function deleteTournamentSchedule(
       message: "Tournament schedule deleted successfully",
     };
   } catch (error) {
-    console.error("Error deleting tournament schedule:", error);
     return {
       success: false,
       message: "Failed to delete tournament schedule",
@@ -557,7 +503,6 @@ export async function getBracketData(tournamentId: string): Promise<{
       totalRounds: maxRound,
     };
   } catch (error) {
-    console.error("Error getting bracket data:", error);
     return {
       success: false,
       rounds: new Map(),

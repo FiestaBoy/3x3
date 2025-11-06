@@ -40,8 +40,6 @@ export function generateRoundRobinSchedule(teams: Team[]): MatchToSchedule[] {
     throw new Error("Round robin requires at least 4 teams");
   }
 
-  console.log(`Generating round robin schedule for ${teams.length} teams`);
-
   const matches: MatchToSchedule[] = [];
   const n = teams.length;
   const isOdd = n % 2 === 1;
@@ -51,10 +49,6 @@ export function generateRoundRobinSchedule(teams: Team[]): MatchToSchedule[] {
   const totalParticipants = participants.length;
   const totalRounds = totalParticipants - 1;
   const matchesPerRound = totalParticipants / 2;
-
-  console.log(
-    `Total rounds: ${totalRounds}, Matches per round: ${matchesPerRound}`,
-  );
 
   /**
    * Circle Method Implementation
@@ -90,9 +84,6 @@ export function generateRoundRobinSchedule(teams: Team[]): MatchToSchedule[] {
 
       // Skip if either team is null (bye)
       if (!home || !away) {
-        console.log(
-          `Round ${roundNumber}: Bye for ${home?.teamName || away?.teamName}`,
-        );
         continue;
       }
 
@@ -114,8 +105,6 @@ export function generateRoundRobinSchedule(teams: Team[]): MatchToSchedule[] {
       participants.splice(1, 0, last);
     }
   }
-
-  console.log(`Generated ${matches.length} matches for round robin`);
 
   return matches;
 }

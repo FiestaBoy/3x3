@@ -64,15 +64,6 @@ export class TimeScheduler {
     for (let i = 1; i <= config.numberOfCourts; i++) {
       this.courtAvailability.set(i, this.daySchedules[0].startTime);
     }
-
-    console.log(`TimeScheduler initialized:`, {
-      startDate: this.tournamentStartDate.toISOString(),
-      days: this.daySchedules.length,
-      courts: config.numberOfCourts,
-      dailyWindow: `${config.dailyStartTime} - ${config.dailyEndTime}`,
-      gameDuration: config.gameDurationMinutes,
-      breakDuration: config.breakDurationMinutes,
-    });
   }
 
   /**
@@ -109,12 +100,6 @@ export class TimeScheduler {
         startTime: dayStart,
         endTime: dayEnd,
       });
-
-      console.log(`Day ${day + 1} schedule:`, {
-        date: currentDate.toDateString(),
-        start: dayStart.toISOString(),
-        end: dayEnd.toISOString(),
-      });
     }
 
     return schedules;
@@ -133,8 +118,6 @@ export class TimeScheduler {
   public scheduleMatches(matches: MatchToSchedule[]): ScheduledMatch[] {
     const scheduledMatches: ScheduledMatch[] = [];
     const teamNextAvailable = new Map<number, Date>(); // Track when each team is next available
-
-    console.log(`\n🎯 Scheduling ${matches.length} matches...`);
 
     for (const match of matches) {
       // Handle matches with TBD teams (byes or pending)
@@ -172,10 +155,6 @@ export class TimeScheduler {
         estimatedEndTime: matchEndTime,
       });
 
-      console.log(
-        `  ✅ Match ${match.gameNumber}: Court ${slot.courtNumber} at ${slot.scheduledTime.toISOString()}`,
-      );
-
       // Update court availability (after game + break)
       this.courtAvailability.set(slot.courtNumber, matchEndTime);
 
@@ -187,10 +166,6 @@ export class TimeScheduler {
         teamNextAvailable.set(match.team2Id, matchEndTime);
       }
     }
-
-    console.log(
-      `✅ Successfully scheduled ${scheduledMatches.length} matches\n`,
-    );
 
     return scheduledMatches;
   }
@@ -372,14 +347,6 @@ export class TimeScheduler {
       estimatedEndTime =
         this.daySchedules[this.daySchedules.length - 1].endTime;
     }
-
-    console.log(`📊 Tournament Duration Estimate:`, {
-      totalMatches: numberOfMatches,
-      matchesPerDay,
-      daysNeeded,
-      daysAllocated: this.config.numberOfDays,
-      estimatedEnd: estimatedEndTime.toISOString(),
-    });
 
     return {
       estimatedEndTime,

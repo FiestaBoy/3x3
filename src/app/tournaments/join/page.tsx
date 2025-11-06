@@ -1,7 +1,6 @@
 import JoinTournamentForm from "@/src/components/tournaments/JoinTournamentForm";
 import {
   getCaptainTeamNames,
-  getUserSession,
 } from "@/src/lib/db/utils/helpers";
 import { joinTournament } from "@/src/lib/db/tournaments/joinTournament";
 import { Trophy, Lock } from "lucide-react";
@@ -9,10 +8,8 @@ import { Trophy, Lock } from "lucide-react";
 import { redirect } from "next/navigation";
 
 export default async function Page() {
-  // fetch teams for the current session user on the server
   const teams = await getCaptainTeamNames();
 
-  // server action — will run on the server when invoked from the client component
   async function handleJoin(payload: { joinCode: string; teamId: string }) {
     "use server";
     const { joinCode, teamId } = payload ?? {};

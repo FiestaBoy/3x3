@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { Menu, CircleUser, LogOut } from "lucide-react";
 import { logOut } from "../../lib/db/auth/session";
 import Link from "next/link";

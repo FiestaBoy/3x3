@@ -1,22 +1,7 @@
-// app/tournaments/create/page.tsx
 import CreateTournamentForm from "@/src/components/tournaments/CreateTournamentForm";
-import { getUserSession } from "@/src/lib/db/utils/helpers";
-import { redirect } from "next/navigation";
 import { Sparkles } from "lucide-react";
 
 export default async function CreateTournamentPage() {
-  // Check if user is logged in and has organizer permissions
-  try {
-    const session = await getUserSession();
-
-    // Optional: Check if user has organizer role
-    // if (session.role !== 'organizer' && session.role !== 'admin') {
-    //   redirect('/tournaments?error=unauthorized');
-    // }
-  } catch (error) {
-    redirect("/auth/login");
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-base-200 via-base-300 to-base-200 py-12 px-4">
       <div className="max-w-5xl mx-auto">

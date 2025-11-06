@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import {
   AgeGroup,
   getAgeGroupMinBirthdays,
-} from "@/src/app/constants/ageGroups";
+} from "@/src/lib/constants/ageGroups";
 import { cookies } from "next/headers";
 import { decrypt } from "../auth/session";
 
